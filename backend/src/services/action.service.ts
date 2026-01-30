@@ -74,10 +74,13 @@ export class ActionService {
     return action;
   }
 
-  rejectAction(actionId: string): PendingAction {
+  rejectAction(actionId: string, userId: string): PendingAction {
     const action = actions.get(actionId);
     if (!action) {
       throw new Error('Action not found');
+    }
+    if (action.userId !== userId) {
+      throw new Error('Unauthorized');
     }
     if (action.status !== 'pending') {
       throw new Error(`Action already ${action.status}`);

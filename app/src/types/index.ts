@@ -35,11 +35,34 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface CreateEventDetails {
+  calendarId: string;
+  summary: string;
+  description?: string;
+  startDateTime: string;
+  endDateTime: string;
+  timeZone?: string;
+  attendees?: string[];
+  location?: string;
+}
+
+export interface UpdateEventDetails extends Partial<CreateEventDetails> {
+  calendarId: string;
+  eventId: string;
+}
+
+export interface DeleteEventDetails {
+  calendarId: string;
+  eventId: string;
+}
+
+export type ActionDetails = CreateEventDetails | UpdateEventDetails | DeleteEventDetails;
+
 export interface PendingAction {
   id: string;
   type: 'create_event' | 'update_event' | 'delete_event';
   description: string;
-  details: Record<string, any>;
+  details: ActionDetails;
   status: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
   timestamp: string;
 }

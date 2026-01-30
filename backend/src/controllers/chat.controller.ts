@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest, ApiResponse } from '../types';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
+import { toFrontendAction } from '../utils/action.utils';
 
 const param = (req: AuthenticatedRequest, name: string): string =>
   req.params[name] as string;
@@ -11,17 +12,6 @@ const parseIntParam = (value: unknown, defaultVal: number, min = 0, max = 100): 
   if (isNaN(n)) return defaultVal;
   return Math.max(min, Math.min(max, Math.floor(n)));
 };
-
-function toFrontendAction(action: any) {
-  return {
-    id: action.id,
-    type: action.actionType,
-    description: action.description,
-    details: action.params,
-    status: action.status,
-    timestamp: action.createdAt,
-  };
-}
 
 export const getConversations = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -130,7 +120,7 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
-    const result = actionService.rejectAction(actionId);
+    const result = actionService.rejectAction(actionId, req.user.id);
     res.json({ success: true, data: toFrontendAction(result), message: 'Action rejected' } as ApiResponse);
   } catch (error: any) {
     console.error('Error rejecting action:', error);

@@ -1,4 +1,4 @@
-import type { PendingAction } from '../../types';
+import type { PendingAction, CreateEventDetails, UpdateEventDetails, DeleteEventDetails } from '../../types';
 
 interface ApprovalModalProps {
   action: PendingAction;
@@ -92,6 +92,9 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
     return date.toLocaleString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -104,11 +107,11 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   };
 
   const renderActionDetails = () => {
-    const { details } = action;
+    const details = action.details as CreateEventDetails & UpdateEventDetails & DeleteEventDetails;
 
-    const title = details.summary || details.title;
-    const startTime = details.startDateTime || details.startTime;
-    const endTime = details.endDateTime || details.endTime;
+    const title = details.summary;
+    const startTime = details.startDateTime;
+    const endTime = details.endDateTime;
 
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
