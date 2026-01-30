@@ -5,6 +5,7 @@ import { chatService } from './services/chat.service';
 import type { Socket } from 'net';
 
 const MAX_MESSAGE_LENGTH = 4000;
+const CONVERSATION_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 function toFrontendAction(action: any) {
   return {
@@ -63,39 +64,46 @@ export function setupWebSocket(server: HttpServer): WebSocketServer {
       }
 
       if (parsed.type !== 'send_message') {
-        ws.send(JSON.stringify({ type: 'error', error: `Unknown message type: ${parsed.type}` }));
+        ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: `Unknown message type: ${parsed.type}` }));
         return;
       }
 
       let message: string = parsed.message;
       if (!message || typeof message !== 'string') {
-        ws.send(JSON.stringify({ type: 'error', error: 'message is required' }));
+        ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: 'message is required' }));
         return;
       }
 
       message = message.trim();
       if (message.length === 0) {
-        ws.send(JSON.stringify({ type: 'error', error: 'message is required' }));
+        ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: 'message is required' }));
         return;
       }
       if (message.length > MAX_MESSAGE_LENGTH) {
-        ws.send(JSON.stringify({ type: 'error', error: `message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` }));
+        ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: `message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` }));
+        return;
+      }
+
+      // Validate conversationId format to prevent injection
+      const conversationId = parsed.conversationId || null;
+      if (conversationId && !CONVERSATION_ID_PATTERN.test(conversationId)) {
+        ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: 'Invalid conversationId format' }));
         return;
       }
 
       try {
         const result = await chatService.sendMessage(
           userId,
-          parsed.conversationId || null,
+          conversationId,
           message,
           accessToken,
         );
         const data = result.pendingAction
           ? { ...result, pendingAction: toFrontendAction(result.pendingAction) }
           : result;
-        ws.send(JSON.stringify({ type: 'reply', data }));
+        ws.send(JSON.stringify({ type: 'reply', requestId: parsed.requestId, data }));
       } catch (error: any) {
-        ws.send(JSON.stringify({ type: 'error', error: error.message || 'Chat failed' }));
+        ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: error.message || 'Chat failed' }));
       }
     });
   });
