@@ -19,6 +19,7 @@
 ### Database & Persistence
 - [x] Set up database (MongoDB — schema for User, Conversation, Message, PendingAction tables) (PR #7, #8)
 - [x] Implement conversation storage and retrieval (PR #7)
+- [x] Persist user & tokens to MongoDB on OAuth callback via `UserRepository.upsert`
 
 ### LangChain Agent / Chat Service
 - [x] Integrate LangChain.js with ChatGoogleGenerativeAI (Gemini free tier) (PR #8)
