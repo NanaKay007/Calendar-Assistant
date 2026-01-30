@@ -23,8 +23,8 @@
 ### LangChain Agent / Chat Service
 - [x] Integrate LangChain.js with ChatGoogleGenerativeAI (Gemini free tier) (PR #8)
 - [x] Implement custom LangChain tools: `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool` (PR #8)
-- [ ] Implement database-backed `ChatMessageHistory` for BufferMemory
-- [ ] Build AgentExecutor with tool-calling agent and memory
+- [x] Implement database-backed `MongoChatMessageHistory` for conversation persistence (PR #12)
+- [x] Build ReAct agent with tool-calling via LangGraph `createReactAgent` (PR #8, #12)
 
 ### Chat & HITL Backend Endpoints
 - [x] `WebSocket /ws` — real-time chat via WebSocket (replaced `POST /api/chat`) (PR #11)
@@ -36,8 +36,10 @@
 - [x] Intercept mutating tool calls to create PendingAction instead of executing immediately (PR #8)
 
 ### Frontend–Backend Integration
-- [ ] Connect frontend chat UI to WebSocket `/ws` endpoint (replace mock service)
-- [ ] Wire approval modal to real approve/reject endpoints
+- [x] Connect frontend chat UI to WebSocket `/ws` endpoint with auto-reconnect, CSRF, correlation IDs (PR #13)
+- [x] Wire approval modal to real approve/reject endpoints (PR #13, #14)
+- [x] Align frontend PendingAction types with backend schema, shared `toFrontendAction` utility (PR #14)
+- [x] Authorization on rejectAction endpoint (PR #14)
 - [ ] Connect frontend auth to real backend OAuth flow
 - [ ] Connect calendar views to real backend calendar endpoints
 
