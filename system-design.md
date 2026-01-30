@@ -27,7 +27,7 @@ Google OAuth   Google Calendar    LangChain TS Agent
                                   (e.g. Gemini free tier)
                                       │
                                       ▼
-                               SQLite / JSON file
+                               MongoDB
                               (conversation memory)
 ```
 
@@ -51,6 +51,7 @@ Google OAuth   Google Calendar    LangChain TS Agent
 |----------------|--------|------------------------------------|
 | id             | string | UUID primary key                   |
 | user_id        | string | FK → User                         |
+| title          | string | Conversation title (from first message) |
 | created_at     | datetime | Conversation start time           |
 | updated_at     | datetime | Last activity time                |
 
@@ -105,8 +106,8 @@ All endpoints proxy to the Google Calendar API using the user's stored OAuth tok
 The agent is built using **LangChain.js** with the following components:
 
 - **`ChatGoogleGenerativeAI`** — LLM wrapper for Gemini free tier
-- **`AgentExecutor`** / `createToolCallingAgent` — orchestrates tool-calling loop
-- **`BufferMemory`** with a custom **Mongo-db backed `ChatMessageHistory`** — persists multi-turn context
+- **`createReactAgent`** (LangGraph) — orchestrates tool-calling loop
+- **`MongoChatMessageHistory`** — MongoDB-backed chat history; manually loaded per request and passed to agent invocation (no auto-persist checkpointer)
 - **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`
 - **Human-in-the-loop** — when the agent emits a calendar-mutating tool call, the backend intercepts it, saves a `PendingAction`, and returns it to the frontend for approval instead of executing immediately
 
@@ -235,34 +236,35 @@ POST /api/chat
      ▼
 ┌──────────────────────────┐
 │ Load/create Conversation │
-│ record in SQLite         │
+│ record in MongoDB        │
+└─────────┬────────────────┘
+          │
+          ▼
+┌──────────────────────────┐
+│ Save user message via     │
+│ conversationService       │
 └─────────┬────────────────┘
           │
           ▼
 ┌──────────────────────────┐
 │ Instantiate               │
-│ SQLiteChatMessageHistory  │
-│ (sessionId = conv.id)     │
+│ MongoChatMessageHistory   │
+│ (conversationId = conv.id)│
+│ Load full message history │
 └─────────┬────────────────┘
           │
           ▼
 ┌──────────────────────────┐
-│ Create BufferMemory       │
-│ with chatHistory instance │
-└─────────┬────────────────┘
-          │
-          ▼
-┌──────────────────────────┐
-│ Build AgentExecutor:      │
+│ Build ReAct agent:        │
 │  - ChatGoogleGenerativeAI │
 │  - Calendar tools         │
-│  - memory                 │
+│  (no checkpointer)        │
 └─────────┬────────────────┘
           │
           ▼
 ┌──────────────────────────┐
 │ agent.invoke({            │
-│   input: user message     │
+│   messages: history       │
 │ })                        │
 └─────────┬────────────────┘
           │
@@ -273,7 +275,8 @@ POST /api/chat
 │  → return for approval    │
 │ Else:                     │
 │  → return agent response  │
-│ Memory auto-persisted     │
+│ Save reply via            │
+│ conversationService       │
 └──────────────────────────┘
 ```
 
@@ -283,6 +286,6 @@ POST /api/chat
 |-----------------|-------------------------------------------|
 | Frontend        | Vercel                                    |
 | Backend API     | Railway free tier                          |
-| Database        | SQLite file on disk (or Turso free tier)   |
+| Database        | MongoDB Atlas free tier                    |
 | LLM             | Google Gemini free tier API                |
 | OAuth           | Google Cloud (no cost for OAuth alone)     |

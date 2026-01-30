@@ -27,7 +27,7 @@ function toMessage(row: MessageRow): Message {
   return {
     id: row.id,
     conversationId: row.conversation_id,
-    role: row.role as 'user' | 'assistant',
+    role: row.role === 'tool' ? 'assistant' : row.role as 'user' | 'assistant',
     content: row.content,
     createdAt: row.created_at,
   };
