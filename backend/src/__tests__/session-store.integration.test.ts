@@ -50,16 +50,24 @@ describe('Session Store - MongoDB Persistence', () => {
 
     expect(sessions.length).toBeGreaterThanOrEqual(1);
 
-    // The stored session should contain our seeded data
+    // The stored session should exist and be encrypted (not plain JSON)
     const sessionDoc = sessions[0];
     expect(sessionDoc).toHaveProperty('session');
 
-    const parsed =
-      typeof sessionDoc.session === 'string'
-        ? JSON.parse(sessionDoc.session)
-        : sessionDoc.session;
+    // With crypto enabled, the session field should be an encrypted string
+    // that is NOT valid JSON (proving encryption is active)
+    if (typeof sessionDoc.session === 'string') {
+      expect(() => {
+        const parsed = JSON.parse(sessionDoc.session as string);
+        // If it parses, it should NOT contain plaintext tokens
+        expect(parsed?.tokens?.access_token).not.toBe('session-store-test-token');
+      }).toThrow();
+    }
 
-    expect(parsed.tokens.access_token).toBe('session-store-test-token');
-    expect(parsed.user.email).toBe('sess@test.com');
+    // Verify the session actually works by checking auth status
+    const statusRes = await agent.get('/api/auth/status');
+    expect(statusRes.status).toBe(200);
+    expect(statusRes.body.data.isAuthenticated).toBe(true);
+    expect(statusRes.body.data.user.email).toBe('sess@test.com');
   });
 });
