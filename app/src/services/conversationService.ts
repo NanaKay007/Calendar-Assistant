@@ -32,6 +32,7 @@ async function apiFetch<T>(path: string): Promise<T> {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     },
   });
 
