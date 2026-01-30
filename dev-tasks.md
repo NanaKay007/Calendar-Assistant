@@ -43,6 +43,11 @@
 - [x] Connect frontend auth to real backend OAuth flow (PR #15)
 - [x] Connect calendar views to real backend calendar endpoints (PR #15)
 
+### Multi-Provider LLM Support
+- [x] Add Claude (Anthropic) as configurable LLM provider alongside Gemini via `LLM_PROVIDER` env variable
+- [x] LLM factory with provider selection (`backend/src/agent/llm.ts`)
+- [x] Integration tests for LLM factory
+
 ### Testing
 - [ ] Unit tests for LangChain agent and tools
 - [x] Unit tests for WebSocket chat + REST conversation/action endpoints (PR #11)
