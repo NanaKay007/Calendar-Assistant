@@ -94,7 +94,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return dateString;
+      return 'Invalid date';
     }
     return date.toLocaleString('en-US', {
       weekday: 'short',
@@ -112,6 +112,9 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
 
     if (type === 'delete_event') {
       const deleteDetails = details as DeleteEventDetails;
+      if (!deleteDetails.calendarId || !deleteDetails.eventId) {
+        return <div className="bg-red-50 rounded-lg p-4 text-red-700 text-sm">Invalid delete action data</div>;
+      }
       return (
         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
           <div>
