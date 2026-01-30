@@ -1,5 +1,6 @@
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { config } from '../config/env';
 import {
   createListCalendarsTool,
   createListEventsTool,
@@ -17,7 +18,8 @@ Always confirm what you're about to do before taking action. Be concise and help
 
 export async function createCalendarAgent(accessToken: string) {
   const llm = new ChatGoogleGenerativeAI({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-3-flash-preview',
+    apiKey: config.google.geminiApiKey,
   });
 
   const tools = [
