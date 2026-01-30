@@ -16,28 +16,38 @@ export function ConversationSidebar({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
       const data = await conversationService.getConversations();
-      setConversations(data);
+      if (!signal?.aborted) {
+        setConversations(data);
+      }
     } catch (err) {
-      console.error('Failed to fetch conversations:', err);
-      setError('Failed to load conversations');
+      if (!signal?.aborted) {
+        console.error('Failed to fetch conversations:', err);
+        setError('Failed to load conversations');
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchConversations();
+    const controller = new AbortController();
+    fetchConversations(controller.signal);
+    return () => controller.abort();
   }, []);
 
   // Refresh the list when the current conversation changes (e.g. new conversation created)
   useEffect(() => {
     if (currentConversationId) {
-      fetchConversations();
+      const controller = new AbortController();
+      fetchConversations(controller.signal);
+      return () => controller.abort();
     }
   }, [currentConversationId]);
 

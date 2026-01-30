@@ -49,12 +49,17 @@ async function apiFetch<T>(path: string): Promise<T> {
   return body.data as T;
 }
 
+const CONVERSATION_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
+
 class ConversationService {
   async getConversations(limit = 50, offset = 0): Promise<Conversation[]> {
     return apiFetch<Conversation[]>(`/conversations?limit=${limit}&offset=${offset}`);
   }
 
   async getMessages(conversationId: string, limit = 100, offset = 0): Promise<ConversationMessage[]> {
+    if (!CONVERSATION_ID_PATTERN.test(conversationId)) {
+      throw new ApiError('Invalid conversationId format', 400);
+    }
     return apiFetch<ConversationMessage[]>(
       `/conversations/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=${offset}`
     );

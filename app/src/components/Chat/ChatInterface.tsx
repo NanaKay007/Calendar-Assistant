@@ -51,6 +51,13 @@ export function ChatInterface() {
       setSelectedAction(null);
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
+      const errorMsg: ChatMessage = {
+        id: `msg_${Date.now()}_err`,
+        role: 'assistant',
+        content: 'Failed to load conversation messages. Please try again.',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([errorMsg]);
     } finally {
       setIsLoadingMessages(false);
     }
