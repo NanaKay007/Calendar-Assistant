@@ -152,24 +152,25 @@ describe('Conversation History Integration', () => {
   });
 
   it('should fetch multiple conversations and their messages independently', async () => {
-    const ws = await connectWs();
-
     // Create first conversation
-    const first = await sendAndReceive(ws, {
+    const ws1 = await connectWs();
+    const first = await sendAndReceive(ws1, {
       type: 'send_message',
       message: 'First conversation message',
     });
     const convId1 = first.data.conversationId;
+    ws1.close();
 
-    // Create second conversation (new one, no conversationId)
-    // We need to disconnect and reconnect or just send without conversationId
-    // Since not passing conversationId creates a new one:
-    const second = await sendAndReceive(ws, {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Create second conversation via a fresh connection
+    const ws2 = await connectWs();
+    const second = await sendAndReceive(ws2, {
       type: 'send_message',
       message: 'Second conversation message',
     });
     const convId2 = second.data.conversationId;
-    ws.close();
+    ws2.close();
 
     // They should be different conversations
     expect(convId1).not.toBe(convId2);

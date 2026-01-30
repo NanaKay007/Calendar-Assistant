@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { conversationService, type Conversation } from '../../services/conversationService';
 
 interface ConversationSidebarProps {
@@ -17,6 +17,7 @@ export function ConversationSidebar({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const activeControllerRef = useRef<AbortController | null>(null);
 
   const fetchConversations = async (signal?: AbortSignal) => {
     try {
@@ -99,7 +100,12 @@ export function ConversationSidebar({
           <div className="p-4 text-center text-red-400 text-sm">
             {error}
             <button
-              onClick={() => fetchConversations()}
+              onClick={() => {
+                activeControllerRef.current?.abort();
+                const controller = new AbortController();
+                activeControllerRef.current = controller;
+                fetchConversations(controller.signal);
+              }}
               className="block mx-auto mt-2 text-blue-400 hover:text-blue-300 text-xs"
             >
               Retry
