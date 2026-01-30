@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest, ApiResponse } from '../types';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
+import { toFrontendAction } from '../utils/action.utils';
 
 const param = (req: AuthenticatedRequest, name: string): string =>
   req.params[name] as string;
@@ -11,17 +12,6 @@ const parseIntParam = (value: unknown, defaultVal: number, min = 0, max = 100): 
   if (isNaN(n)) return defaultVal;
   return Math.max(min, Math.min(max, Math.floor(n)));
 };
-
-function toFrontendAction(action: any) {
-  return {
-    id: action.id,
-    type: action.actionType,
-    description: action.description,
-    details: action.params,
-    status: action.status,
-    timestamp: action.createdAt,
-  };
-}
 
 export const getConversations = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -93,20 +83,15 @@ export const approveAction = async (req: AuthenticatedRequest, res: Response): P
     }
 
     const actionId = param(req, 'id');
-    const action = actionService.getAction(actionId);
-    if (!action) {
-      res.status(404).json({ success: false, error: 'Action not found' } as ApiResponse);
-      return;
-    }
-    if (action.userId !== req.user.id) {
-      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
-      return;
-    }
-
     const result = await actionService.approveAction(actionId, req.oauth2Client, req.user.id);
     res.json({ success: true, data: toFrontendAction(result), message: 'Action executed successfully' } as ApiResponse);
   } catch (error: any) {
     console.error('Error approving action:', error);
+    // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration
+    if (error.message === 'Action not found' || error.message === 'Unauthorized') {
+      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
+      return;
+    }
     const status = error.message?.includes('already') ? 409 : 500;
     res.status(status).json({ success: false, error: error.message || 'Failed to approve action' } as ApiResponse);
   }
@@ -120,20 +105,15 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
     }
 
     const actionId = param(req, 'id');
-    const action = actionService.getAction(actionId);
-    if (!action) {
-      res.status(404).json({ success: false, error: 'Action not found' } as ApiResponse);
-      return;
-    }
-    if (action.userId !== req.user.id) {
-      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
-      return;
-    }
-
-    const result = actionService.rejectAction(actionId);
+    const result = actionService.rejectAction(actionId, req.user.id);
     res.json({ success: true, data: toFrontendAction(result), message: 'Action rejected' } as ApiResponse);
   } catch (error: any) {
     console.error('Error rejecting action:', error);
+    // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration
+    if (error.message === 'Action not found' || error.message === 'Unauthorized') {
+      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
+      return;
+    }
     const status = error.message?.includes('already') ? 409 : 500;
     res.status(status).json({ success: false, error: error.message || 'Failed to reject action' } as ApiResponse);
   }

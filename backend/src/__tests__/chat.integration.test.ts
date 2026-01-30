@@ -114,9 +114,9 @@ describe('Chat Integration (real agent)', () => {
     expect(response.type).toBe('reply');
     const { pendingAction } = response.data;
     if (pendingAction) {
-      expect(pendingAction.actionType).toBe('create_event');
+      expect(pendingAction.type).toBe('create_event');
       expect(pendingAction.status).toBe('pending');
-      expect(pendingAction.params).toBeDefined();
+      expect(pendingAction.details).toBeDefined();
     }
     expect(response.data.reply.length).toBeGreaterThan(0);
   });

@@ -1,4 +1,4 @@
-import type { PendingAction } from '../../types';
+import type { PendingAction, CreateEventDetails, UpdateEventDetails, DeleteEventDetails } from '../../types';
 
 interface ApprovalModalProps {
   action: PendingAction;
@@ -85,17 +85,17 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
         return 'Update Event';
       case 'delete_event':
         return 'Delete Event';
-      case 'add_attendee':
-        return 'Add Attendee';
-      case 'remove_attendee':
-        return 'Remove Attendee';
       default:
         return 'Pending Action';
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
     return date.toLocaleString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -108,44 +108,72 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   };
 
   const renderActionDetails = () => {
-    const { details } = action;
+    const { type, details } = action;
+
+    if (type === 'delete_event') {
+      const deleteDetails = details as DeleteEventDetails;
+      if (!deleteDetails.calendarId || !deleteDetails.eventId) {
+        return <div className="bg-red-50 rounded-lg p-4 text-red-700 text-sm">Invalid delete action data</div>;
+      }
+      return (
+        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+          <div>
+            <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{deleteDetails.calendarId}</p>
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-700">Event ID:</span>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{deleteDetails.eventId}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // type is 'create_event' or 'update_event'
+    const eventDetails = details as CreateEventDetails | UpdateEventDetails;
 
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-        {details.title && (
+        {eventDetails.summary && (
           <div>
             <span className="text-sm font-medium text-gray-700">Title:</span>
-            <p className="text-sm text-gray-900 mt-1">{details.title}</p>
+            <p className="text-sm text-gray-900 mt-1">{eventDetails.summary}</p>
           </div>
         )}
-        {details.startTime && (
+        {eventDetails.startDateTime && (
           <div>
             <span className="text-sm font-medium text-gray-700">Start:</span>
-            <p className="text-sm text-gray-900 mt-1">{formatDate(details.startTime)}</p>
+            <p className="text-sm text-gray-900 mt-1">{formatDate(eventDetails.startDateTime)}</p>
           </div>
         )}
-        {details.endTime && (
+        {eventDetails.endDateTime && (
           <div>
             <span className="text-sm font-medium text-gray-700">End:</span>
-            <p className="text-sm text-gray-900 mt-1">{formatDate(details.endTime)}</p>
+            <p className="text-sm text-gray-900 mt-1">{formatDate(eventDetails.endDateTime)}</p>
           </div>
         )}
-        {details.location && (
+        {eventDetails.location && (
           <div>
             <span className="text-sm font-medium text-gray-700">Location:</span>
-            <p className="text-sm text-gray-900 mt-1">{details.location}</p>
+            <p className="text-sm text-gray-900 mt-1">{eventDetails.location}</p>
           </div>
         )}
-        {details.description && (
+        {eventDetails.description && (
           <div>
             <span className="text-sm font-medium text-gray-700">Description:</span>
-            <p className="text-sm text-gray-900 mt-1">{details.description}</p>
+            <p className="text-sm text-gray-900 mt-1">{eventDetails.description}</p>
           </div>
         )}
-        {details.calendarId && (
+        {eventDetails.calendarId && (
           <div>
             <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{details.calendarId}</p>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{eventDetails.calendarId}</p>
+          </div>
+        )}
+        {'eventId' in eventDetails && eventDetails.eventId && (
+          <div>
+            <span className="text-sm font-medium text-gray-700">Event ID:</span>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{eventDetails.eventId}</p>
           </div>
         )}
       </div>
