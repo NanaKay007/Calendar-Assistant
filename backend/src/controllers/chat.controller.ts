@@ -12,6 +12,17 @@ const parseIntParam = (value: unknown, defaultVal: number, min = 0, max = 100): 
   return Math.max(min, Math.min(max, Math.floor(n)));
 };
 
+function toFrontendAction(action: any) {
+  return {
+    id: action.id,
+    type: action.actionType,
+    description: action.description,
+    details: action.params,
+    status: action.status,
+    timestamp: action.createdAt,
+  };
+}
+
 export const getConversations = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
@@ -67,7 +78,7 @@ export const getPendingActions = async (req: AuthenticatedRequest, res: Response
     }
 
     const actions = actionService.getPendingActions(req.user.id);
-    res.json({ success: true, data: actions } as ApiResponse);
+    res.json({ success: true, data: actions.map(toFrontendAction) } as ApiResponse);
   } catch (error) {
     console.error('Error getting pending actions:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch pending actions' } as ApiResponse);
@@ -93,7 +104,7 @@ export const approveAction = async (req: AuthenticatedRequest, res: Response): P
     }
 
     const result = await actionService.approveAction(actionId, req.oauth2Client, req.user.id);
-    res.json({ success: true, data: result, message: 'Action executed successfully' } as ApiResponse);
+    res.json({ success: true, data: toFrontendAction(result), message: 'Action executed successfully' } as ApiResponse);
   } catch (error: any) {
     console.error('Error approving action:', error);
     const status = error.message?.includes('already') ? 409 : 500;
@@ -120,7 +131,7 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
     }
 
     const result = actionService.rejectAction(actionId);
-    res.json({ success: true, data: result, message: 'Action rejected' } as ApiResponse);
+    res.json({ success: true, data: toFrontendAction(result), message: 'Action rejected' } as ApiResponse);
   } catch (error: any) {
     console.error('Error rejecting action:', error);
     const status = error.message?.includes('already') ? 409 : 500;
