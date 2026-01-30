@@ -1,118 +1,183 @@
 import type { ChatMessage, PendingAction } from '../types';
 
-// Mock chat service that simulates agent responses
+interface BackendPendingAction {
+  id: string;
+  userId: string;
+  conversationId: string;
+  actionType: 'create_event' | 'update_event' | 'delete_event';
+  params: any;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+interface BackendChatResponse {
+  reply: string;
+  conversationId: string;
+  pendingAction?: BackendPendingAction;
+}
+
+interface WsReplyMessage {
+  type: 'reply';
+  data: BackendChatResponse;
+}
+
+interface WsErrorMessage {
+  type: 'error';
+  error: string;
+}
+
+type WsIncoming = WsReplyMessage | WsErrorMessage;
+
+interface SendResult {
+  message: ChatMessage;
+  pendingAction?: PendingAction;
+}
+
+function mapPendingAction(backend: BackendPendingAction): PendingAction {
+  return {
+    id: backend.id,
+    type: backend.actionType,
+    description: backend.description,
+    details: backend.params,
+    timestamp: backend.createdAt,
+    status: backend.status === 'executed' || backend.status === 'failed' ? 'approved' : backend.status as 'pending' | 'approved' | 'rejected',
+  };
+}
+
 class ChatService {
+  private ws: WebSocket | null = null;
   private messages: ChatMessage[] = [];
   private pendingActions: PendingAction[] = [];
+  private pendingRequests: Map<number, { resolve: (v: SendResult) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }> = new Map();
+  private requestCounter = 0;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private shouldReconnect = false;
 
-  async sendMessage(content: string): Promise<{ message: ChatMessage; pendingAction?: PendingAction }> {
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      role: 'user',
-      content,
-      timestamp: new Date().toISOString(),
-    };
-
-    this.messages.push(userMessage);
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Generate mock agent response
-    const { response, action } = this.generateMockResponse(content);
-
-    const assistantMessage: ChatMessage = {
-      id: `msg_${Date.now() + 1}`,
-      role: 'assistant',
-      content: response,
-      timestamp: new Date().toISOString(),
-    };
-
-    this.messages.push(assistantMessage);
-
-    if (action) {
-      this.pendingActions.push(action);
-    }
-
-    return { message: assistantMessage, pendingAction: action };
+  connect(): void {
+    this.shouldReconnect = true;
+    this.createConnection();
   }
 
-  private generateMockResponse(userInput: string): { response: string; action?: PendingAction } {
-    const input = userInput.toLowerCase();
+  private createConnection(): void {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    this.ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-    // Mock responses based on keywords
-    if (input.includes('schedule') || input.includes('create') || input.includes('meeting')) {
-      const action: PendingAction = {
-        id: `action_${Date.now()}`,
-        type: 'create_event',
-        description: 'Create a new meeting event',
-        details: {
-          title: 'New Meeting',
-          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
-          calendarId: 'cal_1',
-        },
-        timestamp: new Date().toISOString(),
-        status: 'pending',
-      };
-
-      return {
-        response: 'I can help you schedule that meeting. I\'ve prepared the event details. Please review and approve the action.',
-        action,
-      };
-    }
-
-    if (input.includes('delete') || input.includes('cancel')) {
-      const action: PendingAction = {
-        id: `action_${Date.now()}`,
-        type: 'delete_event',
-        description: 'Delete an event',
-        details: {
-          eventId: 'event_1',
-          calendarId: 'cal_1',
-        },
-        timestamp: new Date().toISOString(),
-        status: 'pending',
-      };
-
-      return {
-        response: 'I can help you cancel that event. Please approve this action to proceed.',
-        action,
-      };
-    }
-
-    if (input.includes('update') || input.includes('change') || input.includes('reschedule')) {
-      const action: PendingAction = {
-        id: `action_${Date.now()}`,
-        type: 'update_event',
-        description: 'Update event details',
-        details: {
-          eventId: 'event_1',
-          calendarId: 'cal_1',
-          updates: {
-            startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        },
-        timestamp: new Date().toISOString(),
-        status: 'pending',
-      };
-
-      return {
-        response: 'I can help you reschedule that event. Please review the proposed changes and approve.',
-        action,
-      };
-    }
-
-    if (input.includes('what') || input.includes('when') || input.includes('show')) {
-      return {
-        response: 'Based on your calendars, you have several upcoming events. Your next meeting is the Team Standup tomorrow. Would you like me to provide more details or help you manage any events?',
-      };
-    }
-
-    return {
-      response: 'I\'m your calendar assistant. I can help you view, create, update, or delete calendar events. What would you like to do?',
+    this.ws.onopen = () => {
+      this.reconnectAttempts = 0;
     };
+
+    this.ws.onmessage = (event) => {
+      let data: WsIncoming;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      // Resolve the oldest pending request (FIFO is safe here because the backend
+      // processes messages sequentially per WebSocket connection — each send gets
+      // exactly one reply in order)
+      const firstKey = this.pendingRequests.keys().next().value;
+      if (firstKey === undefined) return;
+
+      const pending = this.pendingRequests.get(firstKey)!;
+      this.pendingRequests.delete(firstKey);
+      if (pending.timer) clearTimeout(pending.timer);
+
+      if (data.type === 'error') {
+        pending.reject(new Error(data.error));
+        return;
+      }
+
+      const response = data.data;
+      const assistantMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        role: 'assistant',
+        content: response.reply,
+        timestamp: new Date().toISOString(),
+      };
+      // Don't push to this.messages — component manages its own React state
+
+      let pendingAction: PendingAction | undefined;
+      if (response.pendingAction) {
+        pendingAction = mapPendingAction(response.pendingAction);
+        this.pendingActions.push(pendingAction);
+      }
+
+      pending.resolve({
+        message: assistantMessage,
+        pendingAction,
+        conversationId: response.conversationId,
+      } as SendResult & { conversationId: string });
+    };
+
+    this.ws.onclose = (event) => {
+      // Stop reconnecting on auth failure (1008 = policy violation)
+      if (event.code === 1008) {
+        this.shouldReconnect = false;
+      }
+      if (this.shouldReconnect) {
+        this.scheduleReconnect();
+      }
+    };
+
+    this.ws.onerror = () => {
+      // onclose will fire after this
+    };
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+    this.reconnectAttempts++;
+    this.reconnectTimer = setTimeout(() => this.createConnection(), delay);
+  }
+
+  disconnect(): void {
+    this.shouldReconnect = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    // Reject any pending requests and clear their timers
+    for (const [, pending] of this.pendingRequests) {
+      if (pending.timer) clearTimeout(pending.timer);
+      pending.reject(new Error('Disconnected'));
+    }
+    this.pendingRequests.clear();
+  }
+
+  sendMessage(content: string, conversationId?: string): Promise<SendResult & { conversationId: string }> {
+    return new Promise((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket is not connected'));
+        return;
+      }
+
+      const requestId = this.requestCounter++;
+      const timer = setTimeout(() => {
+        const req = this.pendingRequests.get(requestId);
+        if (req) {
+          this.pendingRequests.delete(requestId);
+          req.reject(new Error('Request timed out'));
+        }
+      }, 30000);
+      this.pendingRequests.set(requestId, { resolve: resolve as any, reject, timer });
+
+      const payload: any = { type: 'send_message', message: content };
+      if (conversationId) {
+        payload.conversationId = conversationId;
+      }
+      this.ws.send(JSON.stringify(payload));
+    });
   }
 
   getMessages(): ChatMessage[] {
@@ -124,18 +189,27 @@ class ChatService {
   }
 
   async approveAction(actionId: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 800));
-
+    const response = await fetch(`/api/actions/${actionId}/approve`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to approve action: ${response.statusText}`);
+    }
     const action = this.pendingActions.find(a => a.id === actionId);
     if (action) {
       action.status = 'approved';
-      // In a real app, this would trigger the actual calendar operation
     }
   }
 
   async rejectAction(actionId: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+    const response = await fetch(`/api/actions/${actionId}/reject`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to reject action: ${response.statusText}`);
+    }
     const action = this.pendingActions.find(a => a.id === actionId);
     if (action) {
       action.status = 'rejected';
