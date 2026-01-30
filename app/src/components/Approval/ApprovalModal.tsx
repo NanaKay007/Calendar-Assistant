@@ -90,7 +90,8 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       return dateString;
