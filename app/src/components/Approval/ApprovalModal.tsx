@@ -1,4 +1,4 @@
-import type { PendingAction } from '../../types';
+import type { PendingAction, CreateEventDetails, UpdateEventDetails, DeleteEventDetails } from '../../types';
 
 interface ApprovalModalProps {
   action: PendingAction;
@@ -107,54 +107,69 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   };
 
   const renderActionDetails = () => {
-    const details = action.details;
+    const { type, details } = action;
 
-    const title = 'summary' in details ? details.summary : undefined;
-    const startTime = 'startDateTime' in details ? details.startDateTime : undefined;
-    const endTime = 'endDateTime' in details ? details.endDateTime : undefined;
+    if (type === 'delete_event') {
+      const deleteDetails = details as DeleteEventDetails;
+      return (
+        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+          <div>
+            <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{deleteDetails.calendarId}</p>
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-700">Event ID:</span>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{deleteDetails.eventId}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // type is 'create_event' or 'update_event'
+    const eventDetails = details as CreateEventDetails | UpdateEventDetails;
 
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-        {title && (
+        {eventDetails.summary && (
           <div>
             <span className="text-sm font-medium text-gray-700">Title:</span>
-            <p className="text-sm text-gray-900 mt-1">{title}</p>
+            <p className="text-sm text-gray-900 mt-1">{eventDetails.summary}</p>
           </div>
         )}
-        {startTime && (
+        {eventDetails.startDateTime && (
           <div>
             <span className="text-sm font-medium text-gray-700">Start:</span>
-            <p className="text-sm text-gray-900 mt-1">{formatDate(startTime)}</p>
+            <p className="text-sm text-gray-900 mt-1">{formatDate(eventDetails.startDateTime)}</p>
           </div>
         )}
-        {endTime && (
+        {eventDetails.endDateTime && (
           <div>
             <span className="text-sm font-medium text-gray-700">End:</span>
-            <p className="text-sm text-gray-900 mt-1">{formatDate(endTime)}</p>
+            <p className="text-sm text-gray-900 mt-1">{formatDate(eventDetails.endDateTime)}</p>
           </div>
         )}
-        {'location' in details && details.location && (
+        {eventDetails.location && (
           <div>
             <span className="text-sm font-medium text-gray-700">Location:</span>
-            <p className="text-sm text-gray-900 mt-1">{details.location}</p>
+            <p className="text-sm text-gray-900 mt-1">{eventDetails.location}</p>
           </div>
         )}
-        {'description' in details && details.description && (
+        {eventDetails.description && (
           <div>
             <span className="text-sm font-medium text-gray-700">Description:</span>
-            <p className="text-sm text-gray-900 mt-1">{details.description}</p>
+            <p className="text-sm text-gray-900 mt-1">{eventDetails.description}</p>
           </div>
         )}
-        {'calendarId' in details && details.calendarId && (
+        {eventDetails.calendarId && (
           <div>
             <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{details.calendarId}</p>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{eventDetails.calendarId}</p>
           </div>
         )}
-        {'eventId' in details && details.eventId && (
+        {'eventId' in eventDetails && eventDetails.eventId && (
           <div>
             <span className="text-sm font-medium text-gray-700">Event ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{details.eventId}</p>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{eventDetails.eventId}</p>
           </div>
         )}
       </div>
