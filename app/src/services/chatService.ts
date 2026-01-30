@@ -53,6 +53,7 @@ class ChatService {
   private messages: ChatMessage[] = [];
   private pendingActions: PendingAction[] = [];
   private pendingRequests: Map<number, { resolve: (v: SendResult) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }> = new Map();
+  private timedOutRequestIds: Set<number> = new Set();
   private requestCounter = 0;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
@@ -107,6 +108,13 @@ class ChatService {
 
       // Use correlation requestId to match responses to pending requests
       const requestId = data.requestId;
+
+      // Ignore late responses for already-timed-out requests
+      if (requestId !== undefined && this.timedOutRequestIds.has(requestId)) {
+        this.timedOutRequestIds.delete(requestId);
+        return;
+      }
+
       let pending: { resolve: (v: SendResult) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> } | undefined;
 
       if (requestId !== undefined && this.pendingRequests.has(requestId)) {
@@ -164,6 +172,10 @@ class ChatService {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
+    // Clear any existing reconnect timer to prevent multiple concurrent attempts
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
     this.reconnectAttempts++;
     this.reconnectTimer = setTimeout(() => this.createConnection(), delay);
@@ -180,6 +192,7 @@ class ChatService {
       this.ws = null;
     }
     // Reject any pending requests and clear their timers
+    this.timedOutRequestIds.clear();
     for (const [, pending] of this.pendingRequests) {
       if (pending.timer) clearTimeout(pending.timer);
       pending.reject(new Error('Disconnected'));
@@ -199,6 +212,7 @@ class ChatService {
         const req = this.pendingRequests.get(requestId);
         if (req) {
           this.pendingRequests.delete(requestId);
+          this.timedOutRequestIds.add(requestId);
           req.reject(new Error('Request timed out'));
         }
       }, 30000);
@@ -215,7 +229,13 @@ class ChatService {
         }
         payload.conversationId = conversationId;
       }
-      this.ws.send(JSON.stringify(payload));
+      try {
+        this.ws.send(JSON.stringify(payload));
+      } catch (err) {
+        clearTimeout(timer);
+        this.pendingRequests.delete(requestId);
+        reject(err instanceof Error ? err : new Error('Failed to send message'));
+      }
     });
   }
 
