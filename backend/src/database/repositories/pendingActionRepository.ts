@@ -44,17 +44,25 @@ export class PendingActionRepository {
   async create(action: { conversation_id: string; action_type: string; action_payload: object }): Promise<PendingActionRow> {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const payload = JSON.stringify(action.action_payload);
     await this.collection.insertOne({
       id,
       conversation_id: action.conversation_id,
       action_type: action.action_type,
-      action_payload: JSON.stringify(action.action_payload),
+      action_payload: payload,
       status: 'pending',
       created_at: now,
       resolved_at: null,
     });
-    const doc = await this.collection.findOne({ id });
-    return this.toRow(doc)!;
+    return {
+      id,
+      conversation_id: action.conversation_id,
+      action_type: action.action_type,
+      action_payload: payload,
+      status: 'pending',
+      created_at: now,
+      resolved_at: null,
+    };
   }
 
   async findById(id: string): Promise<PendingActionRow | undefined> {

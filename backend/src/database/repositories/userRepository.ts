@@ -35,7 +35,11 @@ export class UserRepository {
 
   private decryptToken(encrypted: string | null): string | null {
     if (!encrypted) return null;
-    return decrypt(encrypted, this.encryptionKey);
+    try {
+      return decrypt(encrypted, this.encryptionKey);
+    } catch {
+      return null;
+    }
   }
 
   private toUserRow(doc: WithId<UserDocument> | UserDocument | null): UserRow | undefined {

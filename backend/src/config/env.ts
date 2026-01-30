@@ -47,6 +47,12 @@ export const config: EnvConfig = {
     uri: getEnvVar('MONGODB_URI'),
     dbName: getEnvVar('MONGODB_DB_NAME'),
   },
-  tokenEncryptionKey: getEnvVar('TOKEN_ENCRYPTION_KEY'),
+  tokenEncryptionKey: (() => {
+    const key = getEnvVar('TOKEN_ENCRYPTION_KEY');
+    if (Buffer.from(key, 'hex').length !== 32) {
+      throw new Error('TOKEN_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
+    }
+    return key;
+  })(),
   frontendUrl: getEnvVar('FRONTEND_URL', 'http://localhost:5173'),
 };

@@ -35,8 +35,9 @@ export class ConversationRepository {
   async create(userId: string): Promise<ConversationRow> {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    await this.collection.insertOne({ id, user_id: userId, created_at: now, updated_at: now });
-    return (await this.findById(id))!;
+    const doc = { id, user_id: userId, created_at: now, updated_at: now };
+    await this.collection.insertOne(doc);
+    return { id, user_id: userId, created_at: now, updated_at: now };
   }
 
   async findById(id: string): Promise<ConversationRow | undefined> {

@@ -39,8 +39,7 @@ export class MessageRepository {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await this.collection.insertOne({ id, ...message, created_at: now });
-    const doc = await this.collection.findOne({ id });
-    return this.toRow(doc)!;
+    return { id, ...message, created_at: now };
   }
 
   async findByConversationId(conversationId: string): Promise<MessageRow[]> {

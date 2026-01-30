@@ -39,6 +39,7 @@ export async function closeDatabase(): Promise<void> {
 }
 
 async function initializeIndexes(database: Db): Promise<void> {
+  await database.collection('users').createIndex({ id: 1 }, { unique: true });
   await database.collection('users').createIndex({ email: 1 }, { unique: true });
   await database.collection('conversations').createIndex({ user_id: 1 });
   await database.collection('messages').createIndex({ conversation_id: 1 });
