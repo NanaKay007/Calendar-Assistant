@@ -74,6 +74,7 @@ export interface CreateEventParams {
 }
 
 export interface UpdateEventParams extends Partial<CreateEventParams> {
+  calendarId: string;
   eventId: string;
 }
 

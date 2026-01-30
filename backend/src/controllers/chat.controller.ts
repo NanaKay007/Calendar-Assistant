@@ -44,7 +44,7 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
     if (conversation.userId !== req.user.id) {
-      res.status(403).json({ success: false, error: 'Forbidden' } as ApiResponse);
+      res.status(404).json({ success: false, error: 'Conversation not found' } as ApiResponse);
       return;
     }
 
@@ -88,11 +88,11 @@ export const approveAction = async (req: AuthenticatedRequest, res: Response): P
       return;
     }
     if (action.userId !== req.user.id) {
-      res.status(403).json({ success: false, error: 'Forbidden' } as ApiResponse);
+      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
       return;
     }
 
-    const result = await actionService.approveAction(actionId, req.oauth2Client);
+    const result = await actionService.approveAction(actionId, req.oauth2Client, req.user.id);
     res.json({ success: true, data: result, message: 'Action executed successfully' } as ApiResponse);
   } catch (error: any) {
     console.error('Error approving action:', error);
@@ -115,7 +115,7 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
       return;
     }
     if (action.userId !== req.user.id) {
-      res.status(403).json({ success: false, error: 'Forbidden' } as ApiResponse);
+      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
       return;
     }
 

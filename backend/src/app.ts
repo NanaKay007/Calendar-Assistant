@@ -47,6 +47,10 @@ app.get('/health', (req: Request, res: Response) => {
 // Test-only route: seed session with real tokens (never exposed in production)
 if (process.env.NODE_ENV === 'test') {
   app.post('/api/test/seed-session', (req: Request, res: Response) => {
+    if (process.env.NODE_ENV !== 'test') {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
     const { tokens, user } = req.body;
     if (!tokens?.access_token) {
       res.status(400).json({ error: 'tokens.access_token is required' });
