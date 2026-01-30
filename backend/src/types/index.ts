@@ -23,43 +23,43 @@ export interface AuthenticatedRequest extends Request {
 export interface UserInfo {
   id: string;
   email: string;
-  name?: string;
-  picture?: string;
+  name?: string | null;
+  picture?: string | null;
 }
 
 // Calendar interfaces
 export interface CalendarListItem {
   id: string;
   summary: string;
-  description?: string;
-  primary?: boolean;
-  backgroundColor?: string;
-  foregroundColor?: string;
-  accessRole?: string;
+  description?: string | null;
+  primary?: boolean | null;
+  backgroundColor?: string | null;
+  foregroundColor?: string | null;
+  accessRole?: string | null;
 }
 
 export interface CalendarEvent {
   id: string;
-  summary?: string;
-  description?: string;
+  summary?: string | null;
+  description?: string | null;
   start?: {
-    dateTime?: string;
-    date?: string;
-    timeZone?: string;
-  };
+    dateTime?: string | null;
+    date?: string | null;
+    timeZone?: string | null;
+  } | null;
   end?: {
-    dateTime?: string;
-    date?: string;
-    timeZone?: string;
-  };
+    dateTime?: string | null;
+    date?: string | null;
+    timeZone?: string | null;
+  } | null;
   attendees?: Array<{
-    email: string;
-    displayName?: string;
-    responseStatus?: string;
-  }>;
-  location?: string;
-  status?: string;
-  htmlLink?: string;
+    email?: string | null;
+    displayName?: string | null;
+    responseStatus?: string | null;
+  }> | null;
+  location?: string | null;
+  status?: string | null;
+  htmlLink?: string | null;
 }
 
 export interface CreateEventParams {

@@ -7,9 +7,14 @@
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' NODE_ENV=test jest --verbose --runInBand"
   },
-  "keywords": ["calendar", "gsuite", "google-calendar", "oauth"],
+  "keywords": [
+    "calendar",
+    "gsuite",
+    "google-calendar",
+    "oauth"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -25,8 +30,13 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.18.2",
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.1.0",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.11",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
