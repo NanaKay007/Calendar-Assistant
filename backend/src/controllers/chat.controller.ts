@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest, ApiResponse } from '../types';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
+import { toFrontendAction } from '../utils/action.utils';
 
 const param = (req: AuthenticatedRequest, name: string): string =>
   req.params[name] as string;
@@ -67,7 +68,7 @@ export const getPendingActions = async (req: AuthenticatedRequest, res: Response
     }
 
     const actions = actionService.getPendingActions(req.user.id);
-    res.json({ success: true, data: actions } as ApiResponse);
+    res.json({ success: true, data: actions.map(toFrontendAction) } as ApiResponse);
   } catch (error) {
     console.error('Error getting pending actions:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch pending actions' } as ApiResponse);
@@ -82,20 +83,15 @@ export const approveAction = async (req: AuthenticatedRequest, res: Response): P
     }
 
     const actionId = param(req, 'id');
-    const action = actionService.getAction(actionId);
-    if (!action) {
-      res.status(404).json({ success: false, error: 'Action not found' } as ApiResponse);
-      return;
-    }
-    if (action.userId !== req.user.id) {
+    const result = await actionService.approveAction(actionId, req.oauth2Client, req.user.id);
+    res.json({ success: true, data: toFrontendAction(result), message: 'Action executed successfully' } as ApiResponse);
+  } catch (error: any) {
+    console.error('Error approving action:', error);
+    // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration
+    if (error.message === 'Action not found' || error.message === 'Unauthorized') {
       res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
       return;
     }
-
-    const result = await actionService.approveAction(actionId, req.oauth2Client, req.user.id);
-    res.json({ success: true, data: result, message: 'Action executed successfully' } as ApiResponse);
-  } catch (error: any) {
-    console.error('Error approving action:', error);
     const status = error.message?.includes('already') ? 409 : 500;
     res.status(status).json({ success: false, error: error.message || 'Failed to approve action' } as ApiResponse);
   }
@@ -109,20 +105,15 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
     }
 
     const actionId = param(req, 'id');
-    const action = actionService.getAction(actionId);
-    if (!action) {
-      res.status(404).json({ success: false, error: 'Action not found' } as ApiResponse);
-      return;
-    }
-    if (action.userId !== req.user.id) {
+    const result = actionService.rejectAction(actionId, req.user.id);
+    res.json({ success: true, data: toFrontendAction(result), message: 'Action rejected' } as ApiResponse);
+  } catch (error: any) {
+    console.error('Error rejecting action:', error);
+    // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration
+    if (error.message === 'Action not found' || error.message === 'Unauthorized') {
       res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
       return;
     }
-
-    const result = actionService.rejectAction(actionId);
-    res.json({ success: true, data: result, message: 'Action rejected' } as ApiResponse);
-  } catch (error: any) {
-    console.error('Error rejecting action:', error);
     const status = error.message?.includes('already') ? 409 : 500;
     res.status(status).json({ success: false, error: error.message || 'Failed to reject action' } as ApiResponse);
   }

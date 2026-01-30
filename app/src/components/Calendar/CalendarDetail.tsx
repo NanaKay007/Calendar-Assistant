@@ -69,6 +69,9 @@ function formatTimeLong(dateStr: string) {
 
 function formatDateLong(dateStr: string) {
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return 'Invalid date';
+  }
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
