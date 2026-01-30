@@ -19,6 +19,7 @@
 ### Database & Persistence
 - [x] Set up database (MongoDB — schema for User, Conversation, Message, PendingAction tables) (PR #7, #8)
 - [x] Implement conversation storage and retrieval (PR #7)
+- [x] Persist user & tokens to MongoDB on OAuth callback via `UserRepository.upsert`
 - [x] Replace in-memory session store with MongoDB-backed `connect-mongo` for persistent sessions
 
 ### LangChain Agent / Chat Service
@@ -43,6 +44,12 @@
 - [x] Authorization on rejectAction endpoint (PR #14)
 - [x] Connect frontend auth to real backend OAuth flow (PR #15)
 - [x] Connect calendar views to real backend calendar endpoints (PR #15)
+- [x] Conversation history sidebar — fetch and display past conversations, load messages on click, new conversation button (PR #18)
+
+### Multi-Provider LLM Support
+- [x] Add Claude (Anthropic) as configurable LLM provider alongside Gemini via `LLM_PROVIDER` env variable
+- [x] LLM factory with provider selection (`backend/src/agent/llm.ts`)
+- [x] Integration tests for LLM factory
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools

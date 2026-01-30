@@ -11,4 +11,4 @@ A user should be able to:
 ## Non Functional Requirements
 The system should:
 * have memory and keep track of multi-turn conversation context
-* should cost $0 to deploy to production. supporting infrastructure should be free.
+* should cost $0 to deploy to production. supporting infrastructure should be free. (Note: the Gemini free tier satisfies this; the optional Claude provider incurs API costs.)
