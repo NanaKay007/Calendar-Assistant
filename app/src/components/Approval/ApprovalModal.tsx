@@ -1,4 +1,4 @@
-import type { PendingAction, CreateEventDetails } from '../../types';
+import type { PendingAction } from '../../types';
 
 interface ApprovalModalProps {
   action: PendingAction;
@@ -109,9 +109,9 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   const renderActionDetails = () => {
     const details = action.details;
 
-    const title = 'summary' in details ? (details as CreateEventDetails).summary : undefined;
-    const startTime = 'startDateTime' in details ? (details as CreateEventDetails).startDateTime : undefined;
-    const endTime = 'endDateTime' in details ? (details as CreateEventDetails).endDateTime : undefined;
+    const title = 'summary' in details ? details.summary : undefined;
+    const startTime = 'startDateTime' in details ? details.startDateTime : undefined;
+    const endTime = 'endDateTime' in details ? details.endDateTime : undefined;
 
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -133,25 +133,25 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
             <p className="text-sm text-gray-900 mt-1">{formatDate(endTime)}</p>
           </div>
         )}
-        {details.location && (
+        {'location' in details && details.location && (
           <div>
             <span className="text-sm font-medium text-gray-700">Location:</span>
             <p className="text-sm text-gray-900 mt-1">{details.location}</p>
           </div>
         )}
-        {details.description && (
+        {'description' in details && details.description && (
           <div>
             <span className="text-sm font-medium text-gray-700">Description:</span>
             <p className="text-sm text-gray-900 mt-1">{details.description}</p>
           </div>
         )}
-        {details.calendarId && (
+        {'calendarId' in details && details.calendarId && (
           <div>
             <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
             <p className="text-sm text-gray-500 mt-1 font-mono">{details.calendarId}</p>
           </div>
         )}
-        {details.eventId && (
+        {'eventId' in details && details.eventId && (
           <div>
             <span className="text-sm font-medium text-gray-700">Event ID:</span>
             <p className="text-sm text-gray-500 mt-1 font-mono">{details.eventId}</p>

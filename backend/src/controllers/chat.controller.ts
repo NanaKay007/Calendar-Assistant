@@ -110,20 +110,15 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
     }
 
     const actionId = param(req, 'id');
-    const action = actionService.getAction(actionId);
-    if (!action) {
-      res.status(404).json({ success: false, error: 'Action not found' } as ApiResponse);
-      return;
-    }
-    if (action.userId !== req.user.id) {
-      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
-      return;
-    }
-
     const result = actionService.rejectAction(actionId, req.user.id);
     res.json({ success: true, data: toFrontendAction(result), message: 'Action rejected' } as ApiResponse);
   } catch (error: any) {
     console.error('Error rejecting action:', error);
+    // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration
+    if (error.message === 'Action not found' || error.message === 'Unauthorized') {
+      res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
+      return;
+    }
     const status = error.message?.includes('already') ? 409 : 500;
     res.status(status).json({ success: false, error: error.message || 'Failed to reject action' } as ApiResponse);
   }
