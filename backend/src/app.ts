@@ -29,6 +29,9 @@ export const sessionMiddleware = session({
     mongoUrl: config.mongodb.uri,
     dbName: config.mongodb.dbName,
     collectionName: 'sessions',
+    crypto: {
+      secret: config.session.secret,
+    },
   }),
   secret: config.session.secret,
   resave: false,
