@@ -1,67 +1,75 @@
 import { Conversation, Message } from '../types';
-import { randomUUID } from 'crypto';
+import { getDatabase } from '../database/db';
+import { ConversationRepository, ConversationRow } from '../database/repositories/conversationRepository';
+import { MessageRepository, MessageRow } from '../database/repositories/messageRepository';
 
-// In-memory storage (will be replaced by DB repositories)
-const conversations = new Map<string, Conversation>();
-const messages = new Map<string, Message[]>(); // conversationId -> messages
+let reposPromise: Promise<{ convRepo: ConversationRepository; msgRepo: MessageRepository }> | null = null;
+
+async function getRepos() {
+  if (!reposPromise) {
+    reposPromise = (async () => {
+      const db = await getDatabase();
+      return { convRepo: new ConversationRepository(db), msgRepo: new MessageRepository(db) };
+    })();
+  }
+  return reposPromise;
+}
+
+function toConversation(row: ConversationRow): Conversation {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toMessage(row: MessageRow): Message {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    role: row.role === 'tool' ? 'assistant' : row.role as 'user' | 'assistant',
+    content: row.content,
+    createdAt: row.created_at,
+  };
+}
 
 export class ConversationService {
-  getConversations(userId: string, limit = 50, offset = 0): Conversation[] {
-    return Array.from(conversations.values())
-      .filter((c) => c.userId === userId)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(offset, offset + limit);
+  async getConversations(userId: string, limit = 50, offset = 0): Promise<Conversation[]> {
+    const { convRepo } = await getRepos();
+    const rows = await convRepo.findByUserId(userId, { limit, offset });
+    return rows.map(toConversation);
   }
 
-  getMessages(conversationId: string, limit = 100, offset = 0): Message[] {
-    const msgs = messages.get(conversationId) || [];
-    return msgs.slice(offset, offset + limit);
+  async getMessages(conversationId: string, limit = 100, offset = 0): Promise<Message[]> {
+    const { msgRepo } = await getRepos();
+    const rows = await msgRepo.findByConversationId(conversationId, { limit, offset });
+    return rows.map(toMessage);
   }
 
-  getConversation(conversationId: string): Conversation | undefined {
-    return conversations.get(conversationId);
+  async getConversation(conversationId: string): Promise<Conversation | undefined> {
+    const { convRepo } = await getRepos();
+    const row = await convRepo.findById(conversationId);
+    return row ? toConversation(row) : undefined;
   }
 
-  createConversation(userId: string, title: string): Conversation {
-    const now = new Date().toISOString();
-    const conversation: Conversation = {
-      id: randomUUID(),
-      userId,
-      title,
-      createdAt: now,
-      updatedAt: now,
-    };
-    conversations.set(conversation.id, conversation);
-    messages.set(conversation.id, []);
-    return conversation;
+  async createConversation(userId: string, title: string): Promise<Conversation> {
+    const { convRepo } = await getRepos();
+    const row = await convRepo.create(userId, title);
+    return toConversation(row);
   }
 
-  addMessage(conversationId: string, role: 'user' | 'assistant', content: string): Message {
-    const message: Message = {
-      id: randomUUID(),
-      conversationId,
-      role,
-      content,
-      createdAt: new Date().toISOString(),
-    };
-    const msgs = messages.get(conversationId);
-    if (msgs) {
-      msgs.push(message);
-    } else {
-      messages.set(conversationId, [message]);
-    }
-    // Update conversation timestamp
-    const conv = conversations.get(conversationId);
-    if (conv) {
-      conv.updatedAt = message.createdAt;
-    }
-    return message;
+  async addMessage(conversationId: string, role: 'user' | 'assistant', content: string): Promise<Message> {
+    const { convRepo, msgRepo } = await getRepos();
+    const row = await msgRepo.create({ conversation_id: conversationId, role, content });
+    await convRepo.updateTimestamp(conversationId);
+    return toMessage(row);
   }
 
   /** For testing: clear all data */
   _clear(): void {
-    conversations.clear();
-    messages.clear();
+    reposPromise = null;
   }
 }
 

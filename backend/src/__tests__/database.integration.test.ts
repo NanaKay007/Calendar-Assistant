@@ -63,8 +63,9 @@ describe('Database Integration', () => {
       expect(withTokens!.access_token).toBe('access-123');
 
       // 3. Create conversation
-      const conv = await conversationRepo.create(user.id);
+      const conv = await conversationRepo.create(user.id, 'Test Conversation');
       expect(conv.user_id).toBe(user.id);
+      expect(conv.title).toBe('Test Conversation');
 
       // 4. Add messages
       await messageRepo.create({ conversation_id: conv.id, role: 'user', content: 'Schedule a meeting tomorrow at 10am' });
@@ -104,8 +105,8 @@ describe('Database Integration', () => {
       const user1 = await userRepo.upsert({ id: 'user-a', email: 'a@test.com', display_name: 'A' });
       const user2 = await userRepo.upsert({ id: 'user-b', email: 'b@test.com', display_name: 'B' });
 
-      const conv1 = await conversationRepo.create(user1.id);
-      const conv2 = await conversationRepo.create(user2.id);
+      const conv1 = await conversationRepo.create(user1.id, 'Conv A');
+      const conv2 = await conversationRepo.create(user2.id, 'Conv B');
 
       await messageRepo.create({ conversation_id: conv1.id, role: 'user', content: 'User A message' });
       await messageRepo.create({ conversation_id: conv2.id, role: 'user', content: 'User B message' });
@@ -128,7 +129,7 @@ describe('Database Integration', () => {
   describe('Pending action workflows', () => {
     it('should handle multiple actions with mixed statuses', async () => {
       await userRepo.upsert({ id: 'user-1', email: 'u@test.com', display_name: 'U' });
-      const conv = await conversationRepo.create('user-1');
+      const conv = await conversationRepo.create('user-1', 'Action Test Conv');
 
       const a1 = await pendingActionRepo.create({ conversation_id: conv.id, action_type: 'create_event', action_payload: { summary: 'Event 1' } });
       const a2 = await pendingActionRepo.create({ conversation_id: conv.id, action_type: 'delete_event', action_payload: { eventId: 'e1' } });
