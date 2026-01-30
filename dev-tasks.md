@@ -42,6 +42,7 @@
 - [x] Authorization on rejectAction endpoint (PR #14)
 - [x] Connect frontend auth to real backend OAuth flow (PR #15)
 - [x] Connect calendar views to real backend calendar endpoints (PR #15)
+- [x] Conversation history sidebar — fetch and display past conversations, load messages on click, new conversation button (PR #18)
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools
