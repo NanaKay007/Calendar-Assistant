@@ -106,7 +106,7 @@ The agent is built using **LangChain.js** with the following components:
 
 - **`ChatGoogleGenerativeAI`** — LLM wrapper for Gemini free tier
 - **`AgentExecutor`** / `createToolCallingAgent` — orchestrates tool-calling loop
-- **`BufferMemory`** with a custom **SQLite-backed `ChatMessageHistory`** — persists multi-turn context
+- **`BufferMemory`** with a custom **Mongo-db backed `ChatMessageHistory`** — persists multi-turn context
 - **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`
 - **Human-in-the-loop** — when the agent emits a calendar-mutating tool call, the backend intercepts it, saves a `PendingAction`, and returns it to the frontend for approval instead of executing immediately
 
