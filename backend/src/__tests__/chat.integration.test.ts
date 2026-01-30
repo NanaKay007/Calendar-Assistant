@@ -163,6 +163,135 @@ describe('Chat Integration (real agent)', () => {
     expect(response.error).toBe('message is required');
   });
 
+  it('should echo requestId in reply messages', async () => {
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'Hello',
+      requestId: 42,
+    });
+    ws.close();
+
+    expect(response.type).toBe('reply');
+    expect(response.requestId).toBe(42);
+  });
+
+  it('should echo requestId in error messages', async () => {
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: '   ',
+      requestId: 99,
+    });
+    ws.close();
+
+    expect(response.type).toBe('error');
+    expect(response.requestId).toBe(99);
+  });
+
+  it('should reject invalid conversationId format', async () => {
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'Hello',
+      conversationId: '../../../etc/passwd',
+    });
+    ws.close();
+
+    expect(response.type).toBe('error');
+    expect(response.error).toContain('Invalid conversationId');
+  });
+
+  it('should allow valid conversationId format', async () => {
+    const ws = await connectWs();
+    // First get a real conversationId
+    const first = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'Hi',
+    });
+    const convId = first.data.conversationId;
+
+    const second = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'Follow up',
+      conversationId: convId,
+    });
+    ws.close();
+
+    expect(second.type).toBe('reply');
+    expect(second.data.conversationId).toBe(convId);
+  });
+
+  it('should allow reconnection after close', async () => {
+    const ws1 = await connectWs();
+    const r1 = await sendAndReceive(ws1, {
+      type: 'send_message',
+      message: 'Before reconnect',
+    });
+    expect(r1.type).toBe('reply');
+    ws1.close();
+
+    // Wait for close to complete
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Reconnect
+    const ws2 = await connectWs();
+    const r2 = await sendAndReceive(ws2, {
+      type: 'send_message',
+      message: 'After reconnect',
+    });
+    ws2.close();
+
+    expect(r2.type).toBe('reply');
+    expect(r2.data.reply).toBeDefined();
+  });
+
+  it('should reject unauthenticated WebSocket connections', async () => {
+    await new Promise<void>((resolve, reject) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${serverAddress.port}/ws`);
+      ws.on('unexpected-response', (req, res) => {
+        expect(res.statusCode).toBe(401);
+        resolve();
+      });
+      ws.on('open', () => {
+        ws.close();
+        reject(new Error('Should not have connected'));
+      });
+      ws.on('error', () => {
+        // Expected
+      });
+    });
+  });
+
+  describe('CSRF protection', () => {
+    it('should reject approve without X-Requested-With header', async () => {
+      const res = await agent.post('/api/actions/fake-id/approve');
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('CSRF');
+    });
+
+    it('should reject reject without X-Requested-With header', async () => {
+      const res = await agent.post('/api/actions/fake-id/reject');
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('CSRF');
+    });
+
+    it('should allow approve with X-Requested-With header', async () => {
+      const res = await agent
+        .post('/api/actions/fake-id/approve')
+        .set('X-Requested-With', 'XMLHttpRequest');
+      // Should be 404 (action not found) not 403
+      expect(res.status).toBe(404);
+    });
+
+    it('should allow reject with X-Requested-With header', async () => {
+      const res = await agent
+        .post('/api/actions/fake-id/reject')
+        .set('X-Requested-With', 'XMLHttpRequest');
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('Pagination', () => {
     it('should support limit and offset on GET /api/conversations', async () => {
       const ws = await connectWs();
