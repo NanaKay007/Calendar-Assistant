@@ -5,7 +5,7 @@ interface LoginProps {
   onLoginSuccess: () => void;
 }
 
-export function Login({ onLoginSuccess }: LoginProps) {
+export function Login({ onLoginSuccess: _onLoginSuccess }: LoginProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,12 +14,11 @@ export function Login({ onLoginSuccess }: LoginProps) {
     setError(null);
 
     try {
+      // This redirects the browser to Google OAuth — the page will navigate away.
       await authService.signInWithGoogle();
-      onLoginSuccess();
     } catch (err) {
       setError('Failed to sign in. Please try again.');
       console.error('Login error:', err);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -65,7 +64,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           {isLoading ? (
             <>
               <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-              <span>Signing in...</span>
+              <span>Redirecting to Google...</span>
             </>
           ) : (
             <>
@@ -91,10 +90,6 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </>
           )}
         </button>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Demo Mode: Mock authentication enabled</p>
-        </div>
       </div>
     </div>
   );
