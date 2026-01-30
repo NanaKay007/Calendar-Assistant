@@ -6,6 +6,7 @@ Express TypeScript-based backend API for Calendar Assistant with Google OAuth an
 
 - **Authentication Service**: GSuite OAuth2 authentication
 - **Calendar Service**: Full Google Calendar API integration
+- **Database Layer**: MongoDB-backed persistence for users, conversations, messages, and pending actions
 - **Session Management**: Secure session-based authentication
 - **TypeScript**: Fully typed codebase
 - **RESTful API**: Clean and well-documented endpoints
@@ -14,6 +15,7 @@ Express TypeScript-based backend API for Calendar Assistant with Google OAuth an
 
 - Node.js (v18 or higher)
 - npm or yarn
+- MongoDB (local instance or cloud URI such as MongoDB Atlas)
 - Google Cloud Console project with OAuth 2.0 credentials
 
 ## Setup
@@ -329,6 +331,52 @@ DELETE /api/calendars/:calendarId/events/:eventId
 
 Delete an event from a calendar.
 
+## Database Layer
+
+The app uses MongoDB for persistent storage, suitable for distributed deployments. Configure the connection via environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_DB_NAME` | `calendar-assistant` | Database name |
+
+### Collections
+
+| Collection | Purpose |
+|---|---|
+| `users` | Stores user profiles and OAuth tokens |
+| `conversations` | Chat conversation sessions per user |
+| `messages` | Individual messages within conversations |
+| `pending_actions` | Calendar actions awaiting user approval |
+
+Indexes are created automatically on first connection (e.g., unique index on `users.email`).
+
+### Repository Pattern
+
+Each collection has a corresponding repository class that encapsulates all data access:
+
+- **`UserRepository`** — `upsert`, `findById`, `findByEmail`, `updateTokens`
+- **`ConversationRepository`** — `create`, `findById`, `findByUserId`, `updateTimestamp`
+- **`MessageRepository`** — `create`, `findByConversationId`
+- **`PendingActionRepository`** — `create`, `findById`, `findPendingByConversationId`, `updateStatus`
+
+### Database Tests
+
+The database layer has unit and integration tests using `mongodb-memory-server` (no external MongoDB required):
+
+```bash
+# Unit tests
+npm test -- --testPathPatterns='database.test'
+
+# Integration tests (cross-repository workflows)
+npm test -- --testPathPatterns='database.integration'
+
+# All database tests
+npm test -- --testPathPatterns='database'
+```
+
+These tests verify index creation, CRUD operations, upsert idempotency, token updates, multi-user isolation, and pending action status transitions.
+
 ## Integration Tests
 
 The test suite runs real HTTP requests against the Express app and makes real calls to the Google Calendar API. Nothing is mocked.
@@ -429,10 +477,12 @@ This means the full Express middleware chain — session handling, cookie parsin
 ```
 backend/
 ├── src/
-│   ├── __tests__/               # Integration tests
+│   ├── __tests__/               # Tests
 │   │   ├── setup.ts             # Test auth bootstrapping helper
 │   │   ├── auth.integration.test.ts
-│   │   └── calendar.integration.test.ts
+│   │   ├── calendar.integration.test.ts
+│   │   ├── database.test.ts     # Database layer unit tests
+│   │   └── database.integration.test.ts  # Database integration tests
 │   ├── config/
 │   │   └── env.ts               # Environment configuration
 │   ├── controllers/
@@ -443,6 +493,14 @@ backend/
 │   ├── routes/
 │   │   ├── auth.routes.ts
 │   │   └── calendar.routes.ts
+│   ├── database/
+│   │   ├── db.ts                # MongoDB connection and indexes
+│   │   ├── index.ts             # Public exports
+│   │   └── repositories/       # Data access layer
+│   │       ├── userRepository.ts
+│   │       ├── conversationRepository.ts
+│   │       ├── messageRepository.ts
+│   │       └── pendingActionRepository.ts
 │   ├── services/
 │   │   ├── auth.service.ts
 │   │   └── calendar.service.ts
@@ -463,6 +521,7 @@ backend/
 - **Express.js**: Web framework
 - **TypeScript**: Type-safe JavaScript
 - **Google APIs**: OAuth2 and Calendar API
+- **MongoDB**: Document database for distributed-friendly persistence
 - **express-session**: Session management
 - **cors**: Cross-origin resource sharing
 - **dotenv**: Environment variable management
