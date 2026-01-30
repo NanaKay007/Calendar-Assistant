@@ -41,7 +41,7 @@
 - [x] Align frontend PendingAction types with backend schema, shared `toFrontendAction` utility (PR #14)
 - [x] Authorization on rejectAction endpoint (PR #14)
 - [x] Connect frontend auth to real backend OAuth flow (PR #15)
-- [ ] Connect calendar views to real backend calendar endpoints
+- [x] Connect calendar views to real backend calendar endpoints (PR #15)
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools
