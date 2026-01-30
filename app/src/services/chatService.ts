@@ -206,6 +206,13 @@ class ChatService {
 
       const payload: any = { type: 'send_message', message: content, requestId };
       if (conversationId) {
+        // Defense-in-depth: validate conversationId format on the client side too
+        if (!/^[a-zA-Z0-9_-]{1,64}$/.test(conversationId)) {
+          clearTimeout(timer);
+          this.pendingRequests.delete(requestId);
+          reject(new Error('Invalid conversationId format'));
+          return;
+        }
         payload.conversationId = conversationId;
       }
       this.ws.send(JSON.stringify(payload));
@@ -227,7 +234,8 @@ class ChatService {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
     if (!response.ok) {
-      throw new Error(`Failed to approve action: ${response.statusText}`);
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `Failed to approve action: ${response.statusText}`);
     }
     const action = this.pendingActions.find(a => a.id === actionId);
     if (action) {
@@ -242,7 +250,8 @@ class ChatService {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
     if (!response.ok) {
-      throw new Error(`Failed to reject action: ${response.statusText}`);
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `Failed to reject action: ${response.statusText}`);
     }
     const action = this.pendingActions.find(a => a.id === actionId);
     if (action) {
