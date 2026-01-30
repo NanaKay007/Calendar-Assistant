@@ -2,6 +2,10 @@ import { Response } from 'express';
 import { calendarService } from '../services/calendar.service';
 import { AuthenticatedRequest, ApiResponse, CalendarListItem, CalendarEvent } from '../types';
 
+/** Extract a route param as a plain string (Express 5 types params as string | string[]) */
+const param = (req: AuthenticatedRequest, name: string): string =>
+  req.params[name] as string;
+
 /**
  * Get list of all calendars
  */
@@ -43,7 +47,7 @@ export const getCalendar = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const { calendarId } = req.params;
+    const calendarId = param(req, 'calendarId');
 
     if (!calendarId) {
       res.status(400).json({
@@ -81,7 +85,7 @@ export const getEvents = async (req: AuthenticatedRequest, res: Response): Promi
       return;
     }
 
-    const { calendarId } = req.params;
+    const calendarId = param(req, 'calendarId');
     const { timeMin, timeMax, maxResults, orderBy } = req.query;
 
     if (!calendarId) {
@@ -125,7 +129,8 @@ export const getEvent = async (req: AuthenticatedRequest, res: Response): Promis
       return;
     }
 
-    const { calendarId, eventId } = req.params;
+    const calendarId = param(req, 'calendarId');
+    const eventId = param(req, 'eventId');
 
     if (!calendarId || !eventId) {
       res.status(400).json({
@@ -163,7 +168,7 @@ export const createEvent = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const { calendarId } = req.params;
+    const calendarId = param(req, 'calendarId');
     const { summary, description, startDateTime, endDateTime, timeZone, attendees, location } =
       req.body;
 
@@ -213,7 +218,8 @@ export const updateEvent = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const { calendarId, eventId } = req.params;
+    const calendarId = param(req, 'calendarId');
+    const eventId = param(req, 'eventId');
     const { summary, description, startDateTime, endDateTime, timeZone, attendees, location } =
       req.body;
 
@@ -264,7 +270,8 @@ export const deleteEvent = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const { calendarId, eventId } = req.params;
+    const calendarId = param(req, 'calendarId');
+    const eventId = param(req, 'eventId');
 
     if (!calendarId || !eventId) {
       res.status(400).json({
