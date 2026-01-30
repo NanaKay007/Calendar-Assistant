@@ -268,8 +268,8 @@ POST /api/chat
 
 | Component       | Host                                      |
 |-----------------|-------------------------------------------|
-| Frontend        | Vercel / Cloudflare Pages (free tier)      |
-| Backend API     | Railway free tier / Render free tier / Vercel serverless |
+| Frontend        | Vercel                                    |
+| Backend API     | Railway free tier                          |
 | Database        | SQLite file on disk (or Turso free tier)   |
 | LLM             | Google Gemini free tier API                |
 | OAuth           | Google Cloud (no cost for OAuth alone)     |
