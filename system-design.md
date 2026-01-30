@@ -84,11 +84,11 @@ Google OAuth   Google Calendar    LangChain TS Agent
 | Method | Endpoint              | Description                          |
 |--------|-----------------------|--------------------------------------|
 | GET    | `/auth/login`         | Redirects to Google OAuth consent    |
-| GET    | `/auth/callback`      | Handles OAuth callback, stores tokens, returns session |
+| GET    | `/auth/callback`      | Handles OAuth callback, persists user & encrypted tokens to MongoDB, returns session |
 | POST   | `/auth/logout`        | Invalidates session                  |
 | GET    | `/auth/me`            | Returns current user info            |
 
-**Flow:** Frontend redirects to `/auth/login` → Google consent screen → callback stores tokens → frontend receives session cookie/JWT.
+**Flow:** Frontend redirects to `/auth/login` → Google consent screen → callback persists user to MongoDB (via `UserRepository.upsert`) and stores tokens in session → frontend receives session cookie/JWT.
 
 ### 2. Calendar Service
 
