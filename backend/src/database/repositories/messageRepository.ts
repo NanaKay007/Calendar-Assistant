@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Db } from 'mongodb';
 import crypto from 'crypto';
 
 export interface MessageRow {
@@ -10,15 +10,32 @@ export interface MessageRow {
 }
 
 export class MessageRepository {
-  constructor(private db: Database.Database) {}
+  constructor(private db: Db) {}
 
-  create(message: { conversation_id: string; role: 'user' | 'assistant' | 'tool'; content: string }): MessageRow {
-    const id = crypto.randomUUID();
-    this.db.prepare('INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, ?, ?)').run(id, message.conversation_id, message.role, message.content);
-    return this.db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as MessageRow;
+  private get collection() {
+    return this.db.collection('messages');
   }
 
-  findByConversationId(conversationId: string): MessageRow[] {
-    return this.db.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC').all(conversationId) as MessageRow[];
+  private toRow(doc: any): MessageRow {
+    return {
+      id: doc.id,
+      conversation_id: doc.conversation_id,
+      role: doc.role,
+      content: doc.content,
+      created_at: doc.created_at,
+    };
+  }
+
+  async create(message: { conversation_id: string; role: 'user' | 'assistant' | 'tool'; content: string }): Promise<MessageRow> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await this.collection.insertOne({ id, ...message, created_at: now });
+    const doc = await this.collection.findOne({ id });
+    return this.toRow(doc);
+  }
+
+  async findByConversationId(conversationId: string): Promise<MessageRow[]> {
+    const docs = await this.collection.find({ conversation_id: conversationId }).sort({ created_at: 1 }).toArray();
+    return docs.map(d => this.toRow(d));
   }
 }

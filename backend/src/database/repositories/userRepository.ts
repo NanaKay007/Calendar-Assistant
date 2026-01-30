@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Db } from 'mongodb';
 
 export interface UserRow {
   id: string;
@@ -11,36 +11,67 @@ export interface UserRow {
 }
 
 export class UserRepository {
-  constructor(private db: Database.Database) {}
+  constructor(private db: Db) {}
 
-  findById(id: string): UserRow | undefined {
-    return this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+  private get collection() {
+    return this.db.collection('users');
   }
 
-  findByEmail(email: string): UserRow | undefined {
-    return this.db.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserRow | undefined;
+  private toUserRow(doc: any): UserRow | undefined {
+    if (!doc) return undefined;
+    return {
+      id: doc.id,
+      email: doc.email,
+      display_name: doc.display_name,
+      access_token: doc.access_token ?? null,
+      refresh_token: doc.refresh_token ?? null,
+      token_expiry: doc.token_expiry ?? null,
+      created_at: doc.created_at,
+    };
   }
 
-  upsert(user: { id: string; email: string; display_name: string; access_token?: string; refresh_token?: string; token_expiry?: string }): UserRow {
-    const stmt = this.db.prepare(`
-      INSERT INTO users (id, email, display_name, access_token, refresh_token, token_expiry)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        email = excluded.email,
-        display_name = excluded.display_name,
-        access_token = COALESCE(excluded.access_token, users.access_token),
-        refresh_token = COALESCE(excluded.refresh_token, users.refresh_token),
-        token_expiry = COALESCE(excluded.token_expiry, users.token_expiry)
-    `);
-    stmt.run(user.id, user.email, user.display_name, user.access_token ?? null, user.refresh_token ?? null, user.token_expiry ?? null);
-    return this.findById(user.id)!;
+  async findById(id: string): Promise<UserRow | undefined> {
+    const doc = await this.collection.findOne({ id });
+    return this.toUserRow(doc);
   }
 
-  updateTokens(id: string, tokens: { access_token: string; refresh_token?: string; token_expiry?: string }): UserRow | undefined {
-    this.db.prepare(`
-      UPDATE users SET access_token = ?, refresh_token = COALESCE(?, refresh_token), token_expiry = COALESCE(?, token_expiry)
-      WHERE id = ?
-    `).run(tokens.access_token, tokens.refresh_token ?? null, tokens.token_expiry ?? null, id);
+  async findByEmail(email: string): Promise<UserRow | undefined> {
+    const doc = await this.collection.findOne({ email });
+    return this.toUserRow(doc);
+  }
+
+  async upsert(user: { id: string; email: string; display_name: string; access_token?: string; refresh_token?: string; token_expiry?: string }): Promise<UserRow> {
+    await this.collection.updateOne(
+      { id: user.id },
+      {
+        $set: {
+          email: user.email,
+          display_name: user.display_name,
+          ...(user.access_token !== undefined && { access_token: user.access_token }),
+          ...(user.refresh_token !== undefined && { refresh_token: user.refresh_token }),
+          ...(user.token_expiry !== undefined && { token_expiry: user.token_expiry }),
+        },
+        $setOnInsert: {
+          id: user.id,
+          created_at: new Date().toISOString(),
+        },
+      },
+      { upsert: true }
+    );
+    return (await this.findById(user.id))!;
+  }
+
+  async updateTokens(id: string, tokens: { access_token: string; refresh_token?: string; token_expiry?: string }): Promise<UserRow | undefined> {
+    await this.collection.updateOne(
+      { id },
+      {
+        $set: {
+          access_token: tokens.access_token,
+          ...(tokens.refresh_token !== undefined && { refresh_token: tokens.refresh_token }),
+          ...(tokens.token_expiry !== undefined && { token_expiry: tokens.token_expiry }),
+        },
+      }
+    );
     return this.findById(id);
   }
 }

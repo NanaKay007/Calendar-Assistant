@@ -16,6 +16,10 @@ interface EnvConfig {
   session: {
     secret: string;
   };
+  mongodb: {
+    uri: string;
+    dbName: string;
+  };
   frontendUrl: string;
 }
 
@@ -37,6 +41,10 @@ export const config: EnvConfig = {
   },
   session: {
     secret: getEnvVar('SESSION_SECRET'),
+  },
+  mongodb: {
+    uri: getEnvVar('MONGODB_URI'),
+    dbName: getEnvVar('MONGODB_DB_NAME'),
   },
   frontendUrl: getEnvVar('FRONTEND_URL', 'http://localhost:5173'),
 };

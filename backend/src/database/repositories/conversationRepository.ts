@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Db } from 'mongodb';
 import crypto from 'crypto';
 
 export interface ConversationRow {
@@ -9,23 +9,40 @@ export interface ConversationRow {
 }
 
 export class ConversationRepository {
-  constructor(private db: Database.Database) {}
+  constructor(private db: Db) {}
 
-  create(userId: string): ConversationRow {
+  private get collection() {
+    return this.db.collection('conversations');
+  }
+
+  private toRow(doc: any): ConversationRow | undefined {
+    if (!doc) return undefined;
+    return {
+      id: doc.id,
+      user_id: doc.user_id,
+      created_at: doc.created_at,
+      updated_at: doc.updated_at,
+    };
+  }
+
+  async create(userId: string): Promise<ConversationRow> {
     const id = crypto.randomUUID();
-    this.db.prepare('INSERT INTO conversations (id, user_id) VALUES (?, ?)').run(id, userId);
-    return this.findById(id)!;
+    const now = new Date().toISOString();
+    await this.collection.insertOne({ id, user_id: userId, created_at: now, updated_at: now });
+    return (await this.findById(id))!;
   }
 
-  findById(id: string): ConversationRow | undefined {
-    return this.db.prepare('SELECT * FROM conversations WHERE id = ?').get(id) as ConversationRow | undefined;
+  async findById(id: string): Promise<ConversationRow | undefined> {
+    const doc = await this.collection.findOne({ id });
+    return this.toRow(doc);
   }
 
-  findByUserId(userId: string): ConversationRow[] {
-    return this.db.prepare('SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC').all(userId) as ConversationRow[];
+  async findByUserId(userId: string): Promise<ConversationRow[]> {
+    const docs = await this.collection.find({ user_id: userId }).sort({ updated_at: -1 }).toArray();
+    return docs.map(d => this.toRow(d)!);
   }
 
-  updateTimestamp(id: string): void {
-    this.db.prepare("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?").run(id);
+  async updateTimestamp(id: string): Promise<void> {
+    await this.collection.updateOne({ id }, { $set: { updated_at: new Date().toISOString() } });
   }
 }

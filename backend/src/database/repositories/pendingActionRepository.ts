@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Db } from 'mongodb';
 import crypto from 'crypto';
 
 export interface PendingActionRow {
@@ -12,24 +12,53 @@ export interface PendingActionRow {
 }
 
 export class PendingActionRepository {
-  constructor(private db: Database.Database) {}
+  constructor(private db: Db) {}
 
-  create(action: { conversation_id: string; action_type: string; action_payload: object }): PendingActionRow {
+  private get collection() {
+    return this.db.collection('pending_actions');
+  }
+
+  private toRow(doc: any): PendingActionRow | undefined {
+    if (!doc) return undefined;
+    return {
+      id: doc.id,
+      conversation_id: doc.conversation_id,
+      action_type: doc.action_type,
+      action_payload: doc.action_payload,
+      status: doc.status,
+      created_at: doc.created_at,
+      resolved_at: doc.resolved_at ?? null,
+    };
+  }
+
+  async create(action: { conversation_id: string; action_type: string; action_payload: object }): Promise<PendingActionRow> {
     const id = crypto.randomUUID();
-    this.db.prepare('INSERT INTO pending_actions (id, conversation_id, action_type, action_payload) VALUES (?, ?, ?, ?)').run(id, action.conversation_id, action.action_type, JSON.stringify(action.action_payload));
-    return this.db.prepare('SELECT * FROM pending_actions WHERE id = ?').get(id) as PendingActionRow;
+    const now = new Date().toISOString();
+    await this.collection.insertOne({
+      id,
+      conversation_id: action.conversation_id,
+      action_type: action.action_type,
+      action_payload: JSON.stringify(action.action_payload),
+      status: 'pending',
+      created_at: now,
+      resolved_at: null,
+    });
+    const doc = await this.collection.findOne({ id });
+    return this.toRow(doc)!;
   }
 
-  findById(id: string): PendingActionRow | undefined {
-    return this.db.prepare('SELECT * FROM pending_actions WHERE id = ?').get(id) as PendingActionRow | undefined;
+  async findById(id: string): Promise<PendingActionRow | undefined> {
+    const doc = await this.collection.findOne({ id });
+    return this.toRow(doc);
   }
 
-  findPendingByConversationId(conversationId: string): PendingActionRow[] {
-    return this.db.prepare("SELECT * FROM pending_actions WHERE conversation_id = ? AND status = 'pending' ORDER BY created_at ASC").all(conversationId) as PendingActionRow[];
+  async findPendingByConversationId(conversationId: string): Promise<PendingActionRow[]> {
+    const docs = await this.collection.find({ conversation_id: conversationId, status: 'pending' }).sort({ created_at: 1 }).toArray();
+    return docs.map(d => this.toRow(d)!);
   }
 
-  updateStatus(id: string, status: 'approved' | 'rejected'): PendingActionRow | undefined {
-    this.db.prepare("UPDATE pending_actions SET status = ?, resolved_at = datetime('now') WHERE id = ?").run(status, id);
+  async updateStatus(id: string, status: 'approved' | 'rejected'): Promise<PendingActionRow | undefined> {
+    await this.collection.updateOne({ id }, { $set: { status, resolved_at: new Date().toISOString() } });
     return this.findById(id);
   }
 }

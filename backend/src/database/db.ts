@@ -1,80 +1,40 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { MongoClient, Db } from 'mongodb';
 
-let db: Database.Database | null = null;
+let client: MongoClient | null = null;
+let db: Db | null = null;
 
-export function getDatabase(dbPath?: string): Database.Database {
+export async function getDatabase(): Promise<Db> {
   if (db) return db;
 
-  const resolvedPath = dbPath || path.join(process.cwd(), 'data', 'calendar-assistant.db');
+  // Lazy import to avoid eagerly validating all env vars (e.g., in test suites
+  // that only use createTestDatabase and don't need the full app config).
+  const { config } = await import('../config/env');
 
-  // Ensure data directory exists
-  const dir = path.dirname(resolvedPath);
-  const fs = require('fs');
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  client = new MongoClient(config.mongodb.uri);
+  await client.connect();
+  db = client.db(config.mongodb.dbName);
 
-  db = new Database(resolvedPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-
-  initializeSchema(db);
+  await initializeIndexes(db);
   return db;
 }
 
-export function createTestDatabase(): Database.Database {
-  const testDb = new Database(':memory:');
-  testDb.pragma('foreign_keys = ON');
-  initializeSchema(testDb);
+export async function createTestDatabase(mongoClient: MongoClient): Promise<Db> {
+  const testDb = mongoClient.db('calendar-assistant-test');
+  await initializeIndexes(testDb);
   return testDb;
 }
 
-export function closeDatabase(): void {
-  if (db) {
-    db.close();
+export async function closeDatabase(): Promise<void> {
+  if (client) {
+    await client.close();
+    client = null;
     db = null;
   }
 }
 
-function initializeSchema(database: Database.Database): void {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT NOT NULL UNIQUE,
-      display_name TEXT NOT NULL,
-      access_token TEXT,
-      refresh_token TEXT,
-      token_expiry TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS conversations (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS messages (
-      id TEXT PRIMARY KEY,
-      conversation_id TEXT NOT NULL,
-      role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'tool')),
-      content TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (conversation_id) REFERENCES conversations(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS pending_actions (
-      id TEXT PRIMARY KEY,
-      conversation_id TEXT NOT NULL,
-      action_type TEXT NOT NULL,
-      action_payload TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      resolved_at TEXT,
-      FOREIGN KEY (conversation_id) REFERENCES conversations(id)
-    );
-  `);
+async function initializeIndexes(database: Db): Promise<void> {
+  await database.collection('users').createIndex({ email: 1 }, { unique: true });
+  await database.collection('conversations').createIndex({ user_id: 1 });
+  await database.collection('messages').createIndex({ conversation_id: 1 });
+  await database.collection('pending_actions').createIndex({ conversation_id: 1, status: 1 });
 }
