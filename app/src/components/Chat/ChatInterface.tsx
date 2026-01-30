@@ -53,7 +53,8 @@ export function ChatInterface() {
 
     try {
       const result = await chatService.sendMessage(userInput, conversationId);
-      if (result.conversationId) {
+      // Always preserve conversationId; don't overwrite with undefined on subsequent calls
+      if (result.conversationId && !conversationId) {
         setConversationId(result.conversationId);
       }
       // Add assistant message to local state

@@ -20,11 +20,13 @@ interface BackendChatResponse {
 
 interface WsReplyMessage {
   type: 'reply';
+  requestId: number;
   data: BackendChatResponse;
 }
 
 interface WsErrorMessage {
   type: 'error';
+  requestId?: number;
   error: string;
 }
 
@@ -56,6 +58,12 @@ class ChatService {
   private maxReconnectAttempts = 10;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = false;
+  private wsEndpoint: string | null = null;
+
+  /** Configure a fixed WebSocket endpoint instead of deriving from window.location */
+  setEndpoint(url: string): void {
+    this.wsEndpoint = url;
+  }
 
   connect(): void {
     this.shouldReconnect = true;
@@ -63,8 +71,27 @@ class ChatService {
   }
 
   private createConnection(): void {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    this.ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    // Close existing WebSocket before creating a new one to prevent resource leaks
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws.close();
+      this.ws = null;
+    }
+
+    const wsUrl = this.wsEndpoint || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
+
+    try {
+      this.ws = new WebSocket(wsUrl);
+    } catch (err) {
+      // WebSocket constructor can throw synchronously (e.g. invalid URL)
+      console.error('Failed to create WebSocket:', err);
+      if (this.shouldReconnect) {
+        this.scheduleReconnect();
+      }
+      return;
+    }
 
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
@@ -78,13 +105,21 @@ class ChatService {
         return;
       }
 
-      // Resolve the oldest pending request (FIFO is safe here because the backend
-      // processes messages sequentially per WebSocket connection)
-      const firstKey = this.pendingRequests.keys().next().value;
-      if (firstKey === undefined) return;
+      // Use correlation requestId to match responses to pending requests
+      const requestId = data.requestId;
+      let pending: { resolve: (v: SendResult) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> } | undefined;
 
-      const pending = this.pendingRequests.get(firstKey)!;
-      this.pendingRequests.delete(firstKey);
+      if (requestId !== undefined && this.pendingRequests.has(requestId)) {
+        pending = this.pendingRequests.get(requestId)!;
+        this.pendingRequests.delete(requestId);
+      } else {
+        // Fallback to FIFO for backwards compatibility with servers that don't echo requestId
+        const firstKey = this.pendingRequests.keys().next().value;
+        if (firstKey === undefined) return;
+        pending = this.pendingRequests.get(firstKey)!;
+        this.pendingRequests.delete(firstKey);
+      }
+
       if (pending.timer) clearTimeout(pending.timer);
 
       if (data.type === 'error') {
@@ -169,7 +204,7 @@ class ChatService {
       }, 30000);
       this.pendingRequests.set(requestId, { resolve: resolve as any, reject, timer });
 
-      const payload: any = { type: 'send_message', message: content };
+      const payload: any = { type: 'send_message', message: content, requestId };
       if (conversationId) {
         payload.conversationId = conversationId;
       }
@@ -189,6 +224,7 @@ class ChatService {
     const response = await fetch(`/api/actions/${actionId}/approve`, {
       method: 'POST',
       credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
     if (!response.ok) {
       throw new Error(`Failed to approve action: ${response.statusText}`);
@@ -203,6 +239,7 @@ class ChatService {
     const response = await fetch(`/api/actions/${actionId}/reject`, {
       method: 'POST',
       credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
     if (!response.ok) {
       throw new Error(`Failed to reject action: ${response.statusText}`);
