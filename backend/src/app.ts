@@ -5,6 +5,7 @@ import cors from 'cors';
 import { config } from './config/env';
 import authRoutes from './routes/auth.routes';
 import calendarRoutes from './routes/calendar.routes';
+import chatRoutes from './routes/chat.routes';
 
 const app = express();
 
@@ -22,19 +23,18 @@ app.use(
 );
 
 // Session configuration
-app.use(
-  session({
-    secret: config.session.secret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false,
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
-    },
-  })
-);
+export const sessionMiddleware = session({
+  secret: config.session.secret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax',
+  },
+});
+app.use(sessionMiddleware);
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -47,6 +47,10 @@ app.get('/health', (req: Request, res: Response) => {
 // Test-only route: seed session with real tokens (never exposed in production)
 if (process.env.NODE_ENV === 'test') {
   app.post('/api/test/seed-session', (req: Request, res: Response) => {
+    if (process.env.NODE_ENV !== 'test') {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
     const { tokens, user } = req.body;
     if (!tokens?.access_token) {
       res.status(400).json({ error: 'tokens.access_token is required' });
@@ -67,6 +71,7 @@ if (process.env.NODE_ENV === 'test') {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/calendars', calendarRoutes);
+app.use('/api', chatRoutes);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
@@ -77,6 +82,9 @@ app.get('/', (req: Request, res: Response) => {
       health: '/health',
       auth: '/api/auth',
       calendars: '/api/calendars',
+      chat: '/ws (WebSocket)',
+      conversations: '/api/conversations',
+      actions: '/api/actions',
     },
   });
 });

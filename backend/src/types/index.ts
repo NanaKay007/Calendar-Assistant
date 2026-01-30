@@ -74,6 +74,7 @@ export interface CreateEventParams {
 }
 
 export interface UpdateEventParams extends Partial<CreateEventParams> {
+  calendarId: string;
   eventId: string;
 }
 
@@ -83,4 +84,43 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+// Chat & Conversation types
+export interface Message {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// HITL (Human-in-the-Loop) types
+export type ActionType = 'create_event' | 'update_event' | 'delete_event';
+export type ActionStatus = 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
+
+export interface PendingAction {
+  id: string;
+  userId: string;
+  conversationId: string;
+  actionType: ActionType;
+  params: CreateEventParams | UpdateEventParams | { calendarId: string; eventId: string };
+  description: string;
+  status: ActionStatus;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  conversationId: string;
+  pendingAction?: PendingAction;
 }
