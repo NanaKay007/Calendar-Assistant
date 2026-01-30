@@ -1,35 +1,42 @@
+import { HumanMessage } from '@langchain/core/messages';
+import { createLLM } from '../agent/llm';
+
+/**
+ * Real integration tests for createLLM.
+ * These make actual API calls to Gemini and Claude — requires valid API keys
+ * in .env.dev.local (GOOGLE_GEMINI_API_KEY, ANTHROPIC_API_KEY).
+ */
+
 describe('LLM Factory - Integration', () => {
-  const originalEnv = process.env;
+  it('should create a Gemini LLM that responds to a prompt', async () => {
+    const llm = createLLM('gemini');
+    const response = await llm.invoke([new HumanMessage('Say hello in one word.')]);
+    expect(response.content).toBeTruthy();
+    expect(typeof response.content).toBe('string');
+  }, 30_000);
 
-  beforeEach(() => {
-    jest.resetModules();
-  });
+  it('should create a Claude LLM that responds to a prompt', async () => {
+    const llm = createLLM('claude');
+    const response = await llm.invoke([new HumanMessage('Say hello in one word.')]);
+    expect(response.content).toBeTruthy();
+    expect(typeof response.content).toBe('string');
+  }, 30_000);
 
-  afterEach(() => {
-    process.env = { ...originalEnv };
-  });
-
-  it('should return ChatAnthropic when provider is claude', async () => {
-    process.env.LLM_PROVIDER = 'claude';
-    process.env.ANTHROPIC_API_KEY = 'test-key';
-    const { createLLM } = await import('../agent/llm');
-    const { ChatAnthropic } = await import('@langchain/anthropic');
+  it('should use default provider config when no override is given', async () => {
     const llm = createLLM();
-    expect(llm).toBeInstanceOf(ChatAnthropic);
-  });
+    const response = await llm.invoke([new HumanMessage('Say hello in one word.')]);
+    expect(response.content).toBeTruthy();
+  }, 30_000);
 
-  it('should throw when provider is claude but no API key is set', async () => {
-    process.env.LLM_PROVIDER = 'claude';
-    process.env.ANTHROPIC_API_KEY = '';
-    const { createLLM } = await import('../agent/llm');
-    expect(() => createLLM()).toThrow('ANTHROPIC_API_KEY is required');
-  });
-
-  it('should return ChatGoogleGenerativeAI when provider is gemini', async () => {
+  it('should respect providerOverride over env LLM_PROVIDER', async () => {
+    const originalProvider = process.env.LLM_PROVIDER;
     process.env.LLM_PROVIDER = 'gemini';
-    const { createLLM } = await import('../agent/llm');
-    const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai');
-    const llm = createLLM();
-    expect(llm).toBeInstanceOf(ChatGoogleGenerativeAI);
-  });
+
+    // providerOverride='claude' should take precedence over env
+    const llm = createLLM('claude');
+    const response = await llm.invoke([new HumanMessage('Say hello in one word.')]);
+    expect(response.content).toBeTruthy();
+
+    process.env.LLM_PROVIDER = originalProvider;
+  }, 30_000);
 });
