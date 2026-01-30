@@ -17,13 +17,13 @@
 ## TODO
 
 ### Database & Persistence
-- [ ] Set up SQLite database (schema for User, Conversation, Message, PendingAction tables)
-- [ ] Implement conversation storage and retrieval
+- [x] Set up database (MongoDB — schema for User, Conversation, Message, PendingAction tables) (PR #7, #8)
+- [x] Implement conversation storage and retrieval (PR #7)
 
 ### LangChain Agent / Chat Service
-- [ ] Integrate LangChain.js with ChatGoogleGenerativeAI (Gemini free tier)
-- [ ] Implement custom LangChain tools: `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`
-- [ ] Implement SQLite-backed `ChatMessageHistory` for BufferMemory
+- [x] Integrate LangChain.js with ChatGoogleGenerativeAI (Gemini free tier) (PR #8)
+- [x] Implement custom LangChain tools: `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool` (PR #8)
+- [ ] Implement database-backed `ChatMessageHistory` for BufferMemory
 - [ ] Build AgentExecutor with tool-calling agent and memory
 
 ### Chat & HITL Backend Endpoints
