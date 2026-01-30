@@ -13,15 +13,15 @@ jest.spyOn(chatService, 'sendMessage').mockImplementation(
     // Create conversation + messages via the real conversation service
     let convId = conversationId;
     if (!convId) {
-      const conv = conversationService.createConversation(userId, message.slice(0, 30));
+      const conv = await conversationService.createConversation(userId, message.slice(0, 30));
       convId = conv.id;
     }
-    const conversation = conversationService.getConversation(convId!);
+    const conversation = await conversationService.getConversation(convId!);
     if (!conversation) throw new Error('Conversation not found');
 
-    conversationService.addMessage(convId!, 'user', message);
+    await conversationService.addMessage(convId!, 'user', message);
     const reply = `Mock reply to: ${message}`;
-    conversationService.addMessage(convId!, 'assistant', reply);
+    await conversationService.addMessage(convId!, 'assistant', reply);
 
     return { reply, conversationId: convId! };
   }
@@ -63,8 +63,8 @@ describe('Chat & HITL API', () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }, 10000);
 
-  afterEach(() => {
-    conversationService._clear();
+  afterEach(async () => {
+    await conversationService._clear();
     actionService._clear();
   });
 
@@ -80,7 +80,7 @@ describe('Chat & HITL API', () => {
 
   function sendAndReceive(ws: WebSocket, data: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 8000);
       ws.once('message', (raw) => {
         clearTimeout(timeout);
         resolve(JSON.parse(raw.toString()));
@@ -247,14 +247,16 @@ describe('Chat & HITL API', () => {
 
   describe('POST /api/actions/:id/approve', () => {
     it('should return 404 for non-existent action', async () => {
-      const res = await agent.post('/api/actions/non-existent/approve');
+      const res = await agent.post('/api/actions/non-existent/approve')
+        .set('X-Requested-With', 'XMLHttpRequest');
       expect(res.status).toBe(404);
     });
   });
 
   describe('POST /api/actions/:id/reject', () => {
     it('should return 404 for non-existent action', async () => {
-      const res = await agent.post('/api/actions/non-existent/reject');
+      const res = await agent.post('/api/actions/non-existent/reject')
+        .set('X-Requested-With', 'XMLHttpRequest');
       expect(res.status).toBe(404);
     });
 
@@ -272,7 +274,8 @@ describe('Chat & HITL API', () => {
         'Create test event'
       );
 
-      const res = await agent.post(`/api/actions/${action.id}/reject`);
+      const res = await agent.post(`/api/actions/${action.id}/reject`)
+        .set('X-Requested-With', 'XMLHttpRequest');
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('rejected');
     });
@@ -291,8 +294,10 @@ describe('Chat & HITL API', () => {
         'Create test event'
       );
 
-      await agent.post(`/api/actions/${action.id}/reject`);
-      const res = await agent.post(`/api/actions/${action.id}/reject`);
+      await agent.post(`/api/actions/${action.id}/reject`)
+        .set('X-Requested-With', 'XMLHttpRequest');
+      const res = await agent.post(`/api/actions/${action.id}/reject`)
+        .set('X-Requested-With', 'XMLHttpRequest');
       expect(res.status).toBe(409);
     });
   });

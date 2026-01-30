@@ -50,8 +50,8 @@ describe('Chat Integration (real agent)', () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }, 15000);
 
-  afterEach(() => {
-    conversationService._clear();
+  afterEach(async () => {
+    await conversationService._clear();
     actionService._clear();
   });
 
@@ -67,7 +67,7 @@ describe('Chat Integration (real agent)', () => {
 
   function sendAndReceive(ws: WebSocket, data: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 8000);
       ws.once('message', (raw) => {
         clearTimeout(timeout);
         resolve(JSON.parse(raw.toString()));
@@ -137,7 +137,7 @@ describe('Chat Integration (real agent)', () => {
     ws.close();
 
     expect(second.data.reply.toLowerCase()).toContain('integrationtestuser');
-  });
+  }, 30000);
 
   it('should reject messages exceeding the length limit', async () => {
     const ws = await connectWs();
@@ -308,7 +308,7 @@ describe('Chat Integration (real agent)', () => {
 
       const offset = await agent.get('/api/conversations?limit=2&offset=2');
       expect(offset.body.data.length).toBe(1);
-    });
+    }, 120000);
 
     it('should support limit and offset on GET /api/conversations/:id/messages', async () => {
       const ws = await connectWs();
@@ -334,6 +334,6 @@ describe('Chat Integration (real agent)', () => {
         `/api/conversations/${convId}/messages?limit=2&offset=2`
       );
       expect(offsetRes.body.data.length).toBe(2);
-    });
+    }, 90000);
   });
 });

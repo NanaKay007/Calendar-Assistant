@@ -50,6 +50,10 @@ export class MessageRepository {
     return docs.map(d => ({ id: d.id, conversation_id: d.conversation_id, role: d.role, content: d.content, created_at: d.created_at }));
   }
 
+  async deleteAll(): Promise<void> {
+    await this.collection.deleteMany({});
+  }
+
   async findByConversationId(conversationId: string, options?: { limit?: number; offset?: number }): Promise<MessageRow[]> {
     let cursor = this.collection.find({ conversation_id: conversationId }).sort({ created_at: 1 });
     if (options?.offset) {

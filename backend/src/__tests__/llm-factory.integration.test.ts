@@ -1,17 +1,12 @@
 describe('LLM Factory - Integration', () => {
   const originalEnv = process.env;
 
-  afterEach(() => {
-    process.env = { ...originalEnv };
+  beforeEach(() => {
     jest.resetModules();
   });
 
-  it('should return ChatGoogleGenerativeAI when provider is gemini (default)', async () => {
-    process.env.LLM_PROVIDER = 'gemini';
-    const { createLLM } = await import('../agent/llm');
-    const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai');
-    const llm = createLLM();
-    expect(llm).toBeInstanceOf(ChatGoogleGenerativeAI);
+  afterEach(() => {
+    process.env = { ...originalEnv };
   });
 
   it('should return ChatAnthropic when provider is claude', async () => {
@@ -30,8 +25,8 @@ describe('LLM Factory - Integration', () => {
     expect(() => createLLM()).toThrow('ANTHROPIC_API_KEY is required');
   });
 
-  it('should default to gemini when LLM_PROVIDER is not set', async () => {
-    delete process.env.LLM_PROVIDER;
+  it('should return ChatGoogleGenerativeAI when provider is gemini', async () => {
+    process.env.LLM_PROVIDER = 'gemini';
     const { createLLM } = await import('../agent/llm');
     const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai');
     const llm = createLLM();

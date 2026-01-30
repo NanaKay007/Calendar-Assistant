@@ -7,8 +7,8 @@ import { config } from '../config/env';
  * Creates the appropriate LLM instance based on the LLM_PROVIDER env variable.
  * Defaults to Gemini if no provider is specified.
  */
-export function createLLM(): BaseChatModel {
-  const provider = config.llm.provider;
+export function createLLM(providerOverride?: string): BaseChatModel {
+  const provider = providerOverride ?? (process.env.LLM_PROVIDER as string) ?? config.llm.provider;
 
   if (provider === 'claude') {
     if (!config.anthropic.apiKey) {

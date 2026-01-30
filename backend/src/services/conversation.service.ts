@@ -67,9 +67,13 @@ export class ConversationService {
     return toMessage(row);
   }
 
-  /** For testing: clear all data */
-  _clear(): void {
-    reposPromise = null;
+  /** For testing: clear all data from the database */
+  async _clear(): Promise<void> {
+    if (reposPromise) {
+      const { convRepo, msgRepo } = await reposPromise;
+      await convRepo.deleteAll();
+      await msgRepo.deleteAll();
+    }
   }
 }
 
