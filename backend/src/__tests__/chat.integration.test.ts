@@ -1,18 +1,30 @@
 import request from 'supertest';
+import { createServer } from 'http';
+import WebSocket from 'ws';
 import app from '../app';
+import { setupWebSocket } from '../ws';
 import { getTestTokens } from './setup';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
 
 /**
- * Integration tests for chat endpoints with the real LangChain agent.
+ * Integration tests for chat via WebSocket with the real LangChain agent.
  * Requires GOOGLE_TEST_REFRESH_TOKEN and GOOGLE_GEMINI_API_KEY env vars.
  */
 describe('Chat Integration (real agent)', () => {
   let agent: request.Agent;
+  let server: ReturnType<typeof createServer>;
+  let wss: ReturnType<typeof setupWebSocket>;
+  let serverAddress: { port: number };
+  let sessionCookie: string;
 
   beforeAll(async () => {
     const tokens = await getTestTokens();
+
+    server = createServer(app);
+    wss = setupWebSocket(server);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    serverAddress = server.address() as any;
 
     agent = request.agent(app);
     const seedRes = await agent
@@ -27,93 +39,137 @@ describe('Chat Integration (real agent)', () => {
       });
 
     expect(seedRes.status).toBe(200);
+    sessionCookie = seedRes.headers['set-cookie']?.[0]?.split(';')[0] || '';
   });
+
+  afterAll(async () => {
+    for (const client of wss.clients) {
+      client.terminate();
+    }
+    wss.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }, 15000);
 
   afterEach(() => {
     conversationService._clear();
     actionService._clear();
   });
 
-  it('should return a non-placeholder reply for a general question', async () => {
-    const res = await agent
-      .post('/api/chat')
-      .send({ message: 'What can you help me with?' });
+  function connectWs(): Promise<WebSocket> {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${serverAddress.port}/ws`, {
+        headers: { cookie: sessionCookie },
+      });
+      ws.on('open', () => resolve(ws));
+      ws.on('error', reject);
+    });
+  }
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.reply).toBeDefined();
-    expect(res.body.data.reply).not.toContain('placeholder');
-    expect(res.body.data.conversationId).toBeDefined();
+  function sendAndReceive(ws: WebSocket, data: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+      ws.once('message', (raw) => {
+        clearTimeout(timeout);
+        resolve(JSON.parse(raw.toString()));
+      });
+      ws.send(JSON.stringify(data));
+    });
+  }
+
+  it('should return a non-placeholder reply for a general question', async () => {
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'What can you help me with?',
+    });
+    ws.close();
+
+    expect(response.type).toBe('reply');
+    expect(response.data.reply).toBeDefined();
+    expect(response.data.reply).not.toContain('placeholder');
+    expect(response.data.conversationId).toBeDefined();
   });
 
   it('should reference real calendar data when asked to list calendars', async () => {
-    const res = await agent
-      .post('/api/chat')
-      .send({ message: 'List my calendars' });
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'List my calendars',
+    });
+    ws.close();
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    // The agent should have called the list_calendars tool and mentioned calendar info
-    expect(res.body.data.reply.length).toBeGreaterThan(10);
+    expect(response.type).toBe('reply');
+    expect(response.data.reply.length).toBeGreaterThan(10);
   });
 
   it('should return a pendingAction when asked to create an event', async () => {
-    const res = await agent.post('/api/chat').send({
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
       message:
         'Create a meeting called "Test Integration Meeting" tomorrow at 3pm for 1 hour on my primary calendar',
     });
+    ws.close();
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-
-    // The agent should detect a mutating action
-    const { pendingAction } = res.body.data;
+    expect(response.type).toBe('reply');
+    const { pendingAction } = response.data;
     if (pendingAction) {
       expect(pendingAction.actionType).toBe('create_event');
       expect(pendingAction.status).toBe('pending');
       expect(pendingAction.params).toBeDefined();
     }
-    // Even if the agent doesn't create a pending action (e.g. it asks for confirmation first),
-    // the reply should at least mention the event
-    expect(res.body.data.reply.length).toBeGreaterThan(0);
+    expect(response.data.reply.length).toBeGreaterThan(0);
   });
 
   it('should maintain context across messages in the same conversation', async () => {
-    const first = await agent
-      .post('/api/chat')
-      .send({ message: 'My name is IntegrationTestUser' });
+    const ws = await connectWs();
+    const first = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'My name is IntegrationTestUser',
+    });
+    const convId = first.data.conversationId;
 
-    expect(first.status).toBe(200);
-    const convId = first.body.data.conversationId;
+    const second = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'What is my name?',
+      conversationId: convId,
+    });
+    ws.close();
 
-    const second = await agent
-      .post('/api/chat')
-      .send({ message: 'What is my name?', conversationId: convId });
-
-    expect(second.status).toBe(200);
-    expect(second.body.data.reply.toLowerCase()).toContain('integrationtestuser');
+    expect(second.data.reply.toLowerCase()).toContain('integrationtestuser');
   });
 
   it('should reject messages exceeding the length limit', async () => {
-    const longMessage = 'a'.repeat(4001);
-    const res = await agent.post('/api/chat').send({ message: longMessage });
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: 'a'.repeat(4001),
+    });
+    ws.close();
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain('maximum length');
+    expect(response.type).toBe('error');
+    expect(response.error).toContain('maximum length');
   });
 
   it('should reject empty/whitespace-only messages', async () => {
-    const res = await agent.post('/api/chat').send({ message: '   ' });
+    const ws = await connectWs();
+    const response = await sendAndReceive(ws, {
+      type: 'send_message',
+      message: '   ',
+    });
+    ws.close();
 
-    expect(res.status).toBe(400);
+    expect(response.type).toBe('error');
+    expect(response.error).toBe('message is required');
   });
 
   describe('Pagination', () => {
     it('should support limit and offset on GET /api/conversations', async () => {
-      // Create a few conversations
-      await agent.post('/api/chat').send({ message: 'Conv 1' });
-      await agent.post('/api/chat').send({ message: 'Conv 2' });
-      await agent.post('/api/chat').send({ message: 'Conv 3' });
+      const ws = await connectWs();
+      await sendAndReceive(ws, { type: 'send_message', message: 'Conv 1' });
+      await sendAndReceive(ws, { type: 'send_message', message: 'Conv 2' });
+      await sendAndReceive(ws, { type: 'send_message', message: 'Conv 3' });
+      ws.close();
 
       const all = await agent.get('/api/conversations');
       expect(all.body.data.length).toBe(3);
@@ -126,15 +182,17 @@ describe('Chat Integration (real agent)', () => {
     });
 
     it('should support limit and offset on GET /api/conversations/:id/messages', async () => {
-      const chatRes = await agent.post('/api/chat').send({ message: 'First' });
-      const convId = chatRes.body.data.conversationId;
+      const ws = await connectWs();
+      const chatRes = await sendAndReceive(ws, { type: 'send_message', message: 'First' });
+      const convId = chatRes.data.conversationId;
 
-      // Send a second message in same conversation
-      await agent
-        .post('/api/chat')
-        .send({ message: 'Second', conversationId: convId });
+      await sendAndReceive(ws, {
+        type: 'send_message',
+        message: 'Second',
+        conversationId: convId,
+      });
+      ws.close();
 
-      // Should have 4 messages (2 user + 2 assistant)
       const all = await agent.get(`/api/conversations/${convId}/messages`);
       expect(all.body.data.length).toBe(4);
 

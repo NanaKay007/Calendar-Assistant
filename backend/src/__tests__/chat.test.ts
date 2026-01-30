@@ -1,12 +1,45 @@
 import request from 'supertest';
+import { createServer } from 'http';
+import WebSocket from 'ws';
 import app from '../app';
+import { setupWebSocket } from '../ws';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
+import { chatService } from '../services/chat.service';
+
+// Mock chatService.sendMessage to avoid hitting the real LangChain agent
+jest.spyOn(chatService, 'sendMessage').mockImplementation(
+  async (userId: string, conversationId: string | null, message: string, _accessToken: string) => {
+    // Create conversation + messages via the real conversation service
+    let convId = conversationId;
+    if (!convId) {
+      const conv = conversationService.createConversation(userId, message.slice(0, 30));
+      convId = conv.id;
+    }
+    const conversation = conversationService.getConversation(convId!);
+    if (!conversation) throw new Error('Conversation not found');
+
+    conversationService.addMessage(convId!, 'user', message);
+    const reply = `Mock reply to: ${message}`;
+    conversationService.addMessage(convId!, 'assistant', reply);
+
+    return { reply, conversationId: convId! };
+  }
+);
 
 describe('Chat & HITL API', () => {
   let agent: request.Agent;
+  let server: ReturnType<typeof createServer>;
+  let wss: ReturnType<typeof setupWebSocket>;
+  let serverAddress: { port: number };
+  let sessionCookie: string;
 
   beforeAll(async () => {
+    server = createServer(app);
+    wss = setupWebSocket(server);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    serverAddress = server.address() as any;
+
     agent = request.agent(app);
 
     // Seed session with fake tokens/user for unit testing
@@ -18,53 +51,140 @@ describe('Chat & HITL API', () => {
       });
 
     expect(seedRes.status).toBe(200);
+    // Extract session cookie for WebSocket connections
+    sessionCookie = seedRes.headers['set-cookie']?.[0]?.split(';')[0] || '';
   });
+
+  afterAll(async () => {
+    for (const client of wss.clients) {
+      client.terminate();
+    }
+    wss.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }, 10000);
 
   afterEach(() => {
     conversationService._clear();
     actionService._clear();
   });
 
-  describe('POST /api/chat', () => {
-    it('should return 401 without a session', async () => {
-      const res = await request(app)
-        .post('/api/chat')
-        .send({ message: 'hello' });
-      expect(res.status).toBe(401);
+  function connectWs(cookie?: string): Promise<WebSocket> {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${serverAddress.port}/ws`, {
+        headers: cookie ? { cookie } : undefined,
+      });
+      ws.on('open', () => resolve(ws));
+      ws.on('error', reject);
+    });
+  }
+
+  function sendAndReceive(ws: WebSocket, data: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
+      ws.once('message', (raw) => {
+        clearTimeout(timeout);
+        resolve(JSON.parse(raw.toString()));
+      });
+      ws.send(JSON.stringify(data));
+    });
+  }
+
+  describe('WebSocket /ws', () => {
+    it('should reject connection without a session', async () => {
+      await expect(connectWs()).rejects.toThrow();
     });
 
-    it('should return 400 if message is missing', async () => {
-      const res = await agent.post('/api/chat').send({});
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+    it('should accept connection with valid session cookie', async () => {
+      const ws = await connectWs(sessionCookie);
+      expect(ws.readyState).toBe(WebSocket.OPEN);
+      ws.close();
+    });
+
+    it('should return error for invalid JSON', async () => {
+      const ws = await connectWs(sessionCookie);
+      const response = await new Promise<any>((resolve) => {
+        ws.once('message', (raw) => resolve(JSON.parse(raw.toString())));
+        ws.send('not json');
+      });
+      expect(response.type).toBe('error');
+      expect(response.error).toBe('Invalid JSON');
+      ws.close();
+    });
+
+    it('should return error for unknown message type', async () => {
+      const ws = await connectWs(sessionCookie);
+      const response = await sendAndReceive(ws, { type: 'unknown' });
+      expect(response.type).toBe('error');
+      expect(response.error).toContain('Unknown message type');
+      ws.close();
+    });
+
+    it('should return error if message is missing', async () => {
+      const ws = await connectWs(sessionCookie);
+      const response = await sendAndReceive(ws, { type: 'send_message' });
+      expect(response.type).toBe('error');
+      expect(response.error).toBe('message is required');
+      ws.close();
+    });
+
+    it('should return error for empty message', async () => {
+      const ws = await connectWs(sessionCookie);
+      const response = await sendAndReceive(ws, { type: 'send_message', message: '   ' });
+      expect(response.type).toBe('error');
+      expect(response.error).toBe('message is required');
+      ws.close();
+    });
+
+    it('should return error for message exceeding max length', async () => {
+      const ws = await connectWs(sessionCookie);
+      const response = await sendAndReceive(ws, {
+        type: 'send_message',
+        message: 'a'.repeat(4001),
+      });
+      expect(response.type).toBe('error');
+      expect(response.error).toContain('maximum length');
+      ws.close();
     });
 
     it('should create a new conversation and return a reply', async () => {
-      const res = await agent.post('/api/chat').send({ message: 'Hello assistant' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.reply).toBeDefined();
-      expect(res.body.data.conversationId).toBeDefined();
+      const ws = await connectWs(sessionCookie);
+      const response = await sendAndReceive(ws, {
+        type: 'send_message',
+        message: 'Hello assistant',
+      });
+      expect(response.type).toBe('reply');
+      expect(response.data.reply).toBeDefined();
+      expect(response.data.conversationId).toBeDefined();
+      ws.close();
     });
 
     it('should continue an existing conversation', async () => {
-      const first = await agent.post('/api/chat').send({ message: 'First message' });
-      const convId = first.body.data.conversationId;
+      const ws = await connectWs(sessionCookie);
+      const first = await sendAndReceive(ws, {
+        type: 'send_message',
+        message: 'First message',
+      });
+      const convId = first.data.conversationId;
 
-      const second = await agent
-        .post('/api/chat')
-        .send({ message: 'Second message', conversationId: convId });
-
-      expect(second.status).toBe(200);
-      expect(second.body.data.conversationId).toBe(convId);
+      const second = await sendAndReceive(ws, {
+        type: 'send_message',
+        message: 'Second message',
+        conversationId: convId,
+      });
+      expect(second.data.conversationId).toBe(convId);
+      ws.close();
     });
 
-    it('should return 404 for non-existent conversationId', async () => {
-      const res = await agent
-        .post('/api/chat')
-        .send({ message: 'hello', conversationId: 'non-existent-id' });
-      expect(res.status).toBe(404);
+    it('should return error for non-existent conversationId', async () => {
+      const ws = await connectWs(sessionCookie);
+      const response = await sendAndReceive(ws, {
+        type: 'send_message',
+        message: 'hello',
+        conversationId: 'non-existent-id',
+      });
+      expect(response.type).toBe('error');
+      expect(response.error).toContain('not found');
+      ws.close();
     });
   });
 
@@ -80,8 +200,10 @@ describe('Chat & HITL API', () => {
       expect(res.body.data).toEqual([]);
     });
 
-    it('should list conversations after chatting', async () => {
-      await agent.post('/api/chat').send({ message: 'Hello' });
+    it('should list conversations after chatting via WebSocket', async () => {
+      const ws = await connectWs(sessionCookie);
+      await sendAndReceive(ws, { type: 'send_message', message: 'Hello' });
+      ws.close();
 
       const res = await agent.get('/api/conversations');
       expect(res.status).toBe(200);
@@ -97,8 +219,10 @@ describe('Chat & HITL API', () => {
     });
 
     it('should return messages for a conversation', async () => {
-      const chatRes = await agent.post('/api/chat').send({ message: 'Hello there' });
-      const convId = chatRes.body.data.conversationId;
+      const ws = await connectWs(sessionCookie);
+      const chatRes = await sendAndReceive(ws, { type: 'send_message', message: 'Hello there' });
+      ws.close();
+      const convId = chatRes.data.conversationId;
 
       const res = await agent.get(`/api/conversations/${convId}/messages`);
       expect(res.status).toBe(200);
@@ -135,7 +259,6 @@ describe('Chat & HITL API', () => {
     });
 
     it('should reject a pending action', async () => {
-      // Manually create a pending action for testing
       const action = actionService.createAction(
         'test-user-1',
         'conv-1',

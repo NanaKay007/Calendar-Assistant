@@ -23,19 +23,18 @@ app.use(
 );
 
 // Session configuration
-app.use(
-  session({
-    secret: config.session.secret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false,
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
-    },
-  })
-);
+export const sessionMiddleware = session({
+  secret: config.session.secret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax',
+  },
+});
+app.use(sessionMiddleware);
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -79,7 +78,7 @@ app.get('/', (req: Request, res: Response) => {
       health: '/health',
       auth: '/api/auth',
       calendars: '/api/calendars',
-      chat: '/api/chat',
+      chat: '/ws (WebSocket)',
       conversations: '/api/conversations',
       actions: '/api/actions',
     },

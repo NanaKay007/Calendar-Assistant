@@ -110,38 +110,51 @@ The agent is built using **LangChain.js** with the following components:
 - **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`
 - **Human-in-the-loop** — when the agent emits a calendar-mutating tool call, the backend intercepts it, saves a `PendingAction`, and returns it to the frontend for approval instead of executing immediately
 
-| Method | Endpoint                              | Description                                    |
-|--------|---------------------------------------|------------------------------------------------|
-| POST   | `/api/chat`                           | Send a message; returns assistant reply         |
-| GET    | `/api/conversations`                  | List user's past conversations                  |
-| GET    | `/api/conversations/{id}/messages`    | Get full message history for a conversation     |
-| GET    | `/api/actions/pending`                | List pending actions awaiting approval          |
-| POST   | `/api/actions/{id}/approve`           | Approve a pending action (executes it)          |
-| POST   | `/api/actions/{id}/reject`            | Reject a pending action                         |
+| Protocol | Endpoint                              | Description                                    |
+|----------|---------------------------------------|------------------------------------------------|
+| WS       | `/ws`                                 | WebSocket — send/receive chat messages          |
+| GET      | `/api/conversations`                  | List user's past conversations                  |
+| GET      | `/api/conversations/{id}/messages`    | Get full message history for a conversation     |
+| GET      | `/api/actions/pending`                | List pending actions awaiting approval          |
+| POST     | `/api/actions/{id}/approve`           | Approve a pending action (executes it)          |
+| POST     | `/api/actions/{id}/reject`            | Reject a pending action                         |
 
-**`POST /api/chat` request body:**
+**WebSocket `/ws` — client sends:**
 ```json
 {
-  "conversation_id": "uuid | null",
-  "message": "Schedule a meeting with Alex tomorrow at 2pm"
+  "type": "send_message",
+  "message": "Schedule a meeting with Alex tomorrow at 2pm",
+  "conversationId": "uuid | omit for new conversation"
 }
 ```
 
-**Response (when action requires approval):**
+**WebSocket — server replies:**
 ```json
 {
-  "reply": "I'd like to create the following event. Please approve:",
-  "pending_action": {
-    "id": "uuid",
-    "action_type": "create_event",
-    "action_payload": {
-      "summary": "Meeting with Alex",
-      "start": "2026-01-30T14:00:00",
-      "end": "2026-01-30T15:00:00",
-      "calendar_id": "primary"
-    },
-    "status": "pending"
+  "type": "reply",
+  "data": {
+    "reply": "I'd like to create the following event. Please approve:",
+    "conversationId": "uuid",
+    "pendingAction": {
+      "id": "uuid",
+      "actionType": "create_event",
+      "params": {
+        "summary": "Meeting with Alex",
+        "startDateTime": "2026-01-30T14:00:00",
+        "endDateTime": "2026-01-30T15:00:00",
+        "calendarId": "primary"
+      },
+      "status": "pending"
+    }
   }
+}
+```
+
+**WebSocket — server error:**
+```json
+{
+  "type": "error",
+  "error": "message is required"
 }
 ```
 
@@ -194,7 +207,7 @@ User          Frontend              Backend             LLM           Google Cal
  │               │                     │                  │                │
  │──"schedule    │                     │                  │                │
  │  meeting"────▶│                     │                  │                │
- │               │──POST /api/chat─────▶                  │                │
+ │               │──WS send_message───▶                   │                │
  │               │                     │──prompt + ───────▶                │
  │               │                     │  conversation    │                │
  │               │                     │  history         │                │

@@ -27,25 +27,26 @@
 - [ ] Build AgentExecutor with tool-calling agent and memory
 
 ### Chat & HITL Backend Endpoints
-- [ ] `POST /api/chat` — send message, return assistant reply
-- [ ] `GET /api/conversations` — list user conversations
-- [ ] `GET /api/conversations/{id}/messages` — get conversation message history
-- [ ] `GET /api/actions/pending` — list pending actions
-- [ ] `POST /api/actions/{id}/approve` — approve and execute pending action
-- [ ] `POST /api/actions/{id}/reject` — reject pending action
-- [ ] Intercept mutating tool calls to create PendingAction instead of executing immediately
+- [x] `WebSocket /ws` — real-time chat via WebSocket (replaced `POST /api/chat`) (PR #11)
+- [x] `GET /api/conversations` — list user conversations (PR #8)
+- [x] `GET /api/conversations/{id}/messages` — get conversation message history (PR #8)
+- [x] `GET /api/actions/pending` — list pending actions (PR #8)
+- [x] `POST /api/actions/{id}/approve` — approve and execute pending action (PR #8)
+- [x] `POST /api/actions/{id}/reject` — reject pending action (PR #8)
+- [x] Intercept mutating tool calls to create PendingAction instead of executing immediately (PR #8)
 
 ### Frontend–Backend Integration
-- [ ] Connect frontend chat UI to real `POST /api/chat` endpoint (replace mock service)
+- [ ] Connect frontend chat UI to WebSocket `/ws` endpoint (replace mock service)
 - [ ] Wire approval modal to real approve/reject endpoints
 - [ ] Connect frontend auth to real backend OAuth flow
 - [ ] Connect calendar views to real backend calendar endpoints
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools
-- [ ] Unit tests for chat/conversation endpoints
-- [ ] Unit tests for HITL action approval/rejection flow
+- [x] Unit tests for WebSocket chat + REST conversation/action endpoints (PR #11)
+- [x] Unit tests for HITL action approval/rejection flow (PR #8)
 - [ ] End-to-end tests for chat → agent → approval → execution flow
+- [ ] **Fix integration test timeouts** — WebSocket integration tests (`chat.integration.test.ts`) time out due to Gemini API throttling; revisit when rate limits are resolved
 
 ### Deployment
 - [ ] Deploy frontend to Vercel
