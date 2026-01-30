@@ -213,6 +213,11 @@ class ChatService {
         if (req) {
           this.pendingRequests.delete(requestId);
           this.timedOutRequestIds.add(requestId);
+          // Cap the set size to prevent unbounded growth if late responses never arrive
+          if (this.timedOutRequestIds.size > 100) {
+            const oldest = this.timedOutRequestIds.values().next().value;
+            if (oldest !== undefined) this.timedOutRequestIds.delete(oldest);
+          }
           req.reject(new Error('Request timed out'));
         }
       }, 30000);
