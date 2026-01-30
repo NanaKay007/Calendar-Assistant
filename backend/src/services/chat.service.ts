@@ -2,7 +2,10 @@ import { ChatResponse, ActionType } from '../types';
 import { conversationService } from './conversation.service';
 import { actionService } from './action.service';
 import { createCalendarAgent } from '../agent';
-import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
+import { MongoChatMessageHistory } from '../agent/mongoChatHistory';
+import { MessageRepository } from '../database/repositories/messageRepository';
+import { getDatabase } from '../database/db';
 
 // Mutating tool calls that require HITL approval
 const MUTATING_ACTIONS: Record<string, ActionType> = {
@@ -15,17 +18,13 @@ const MUTATING_ACTIONS: Record<string, ActionType> = {
  * Call the LangChain ReAct agent with conversation history.
  */
 async function callAgent(
-  messages: Array<{ role: string; content: string }>,
+  langchainMessages: BaseMessage[],
   accessToken: string
 ): Promise<{
   reply: string;
   toolCall?: { name: string; params: Record<string, any>; description: string };
 }> {
   const agent = await createCalendarAgent(accessToken);
-
-  const langchainMessages = messages.map((m) =>
-    m.role === 'user' ? new HumanMessage(m.content) : new AIMessage(m.content)
-  );
 
   const result = await agent.invoke({ messages: langchainMessages });
 
@@ -70,10 +69,10 @@ export class ChatService {
     let convId = conversationId;
     if (!convId) {
       const title = message.slice(0, 50) + (message.length > 50 ? '...' : '');
-      const conv = conversationService.createConversation(userId, title);
+      const conv = await conversationService.createConversation(userId, title);
       convId = conv.id;
     } else {
-      const existing = conversationService.getConversation(convId);
+      const existing = await conversationService.getConversation(convId);
       if (!existing) {
         throw new Error('Conversation not found');
       }
@@ -83,19 +82,19 @@ export class ChatService {
     }
 
     // Save user message
-    conversationService.addMessage(convId, 'user', message);
+    await conversationService.addMessage(convId, 'user', message);
 
-    // Build message history for agent
-    const history = conversationService.getMessages(convId).map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // Build message history for agent using MongoChatMessageHistory
+    const db = await getDatabase();
+    const messageRepo = new MessageRepository(db);
+    const chatHistory = new MongoChatMessageHistory(convId, messageRepo);
+    const langchainMessages = await chatHistory.getMessages();
 
     // Call agent
-    const agentResult = await callAgent(history, accessToken);
+    const agentResult = await callAgent(langchainMessages, accessToken);
 
     // Save assistant reply
-    conversationService.addMessage(convId, 'assistant', agentResult.reply);
+    await conversationService.addMessage(convId, 'assistant', agentResult.reply);
 
     // Check for mutating tool calls → create PendingAction if needed
     const response: ChatResponse = {

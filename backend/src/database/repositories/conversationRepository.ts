@@ -4,6 +4,7 @@ import crypto from 'crypto';
 interface ConversationDocument extends Document {
   id: string;
   user_id: string;
+  title: string;
   created_at: string;
   updated_at: string;
 }
@@ -11,6 +12,7 @@ interface ConversationDocument extends Document {
 export interface ConversationRow {
   id: string;
   user_id: string;
+  title: string;
   created_at: string;
   updated_at: string;
 }
@@ -27,17 +29,18 @@ export class ConversationRepository {
     return {
       id: doc.id,
       user_id: doc.user_id,
+      title: doc.title,
       created_at: doc.created_at,
       updated_at: doc.updated_at,
     };
   }
 
-  async create(userId: string): Promise<ConversationRow> {
+  async create(userId: string, title: string): Promise<ConversationRow> {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const doc = { id, user_id: userId, created_at: now, updated_at: now };
+    const doc = { id, user_id: userId, title, created_at: now, updated_at: now };
     await this.collection.insertOne(doc);
-    return { id, user_id: userId, created_at: now, updated_at: now };
+    return { id, user_id: userId, title, created_at: now, updated_at: now };
   }
 
   async findById(id: string): Promise<ConversationRow | undefined> {
