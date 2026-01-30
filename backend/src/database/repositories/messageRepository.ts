@@ -42,8 +42,15 @@ export class MessageRepository {
     return { id, ...message, created_at: now };
   }
 
-  async findByConversationId(conversationId: string): Promise<MessageRow[]> {
-    const docs = await this.collection.find({ conversation_id: conversationId }).sort({ created_at: 1 }).toArray();
+  async findByConversationId(conversationId: string, options?: { limit?: number; offset?: number }): Promise<MessageRow[]> {
+    let cursor = this.collection.find({ conversation_id: conversationId }).sort({ created_at: 1 });
+    if (options?.offset) {
+      cursor = cursor.skip(options.offset);
+    }
+    if (options?.limit) {
+      cursor = cursor.limit(options.limit);
+    }
+    const docs = await cursor.toArray();
     return docs.map(d => this.toRow(d)!);
   }
 }

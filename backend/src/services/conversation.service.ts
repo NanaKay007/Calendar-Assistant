@@ -36,14 +36,14 @@ function toMessage(row: MessageRow): Message {
 export class ConversationService {
   async getConversations(userId: string, limit = 50, offset = 0): Promise<Conversation[]> {
     const { convRepo } = await getRepos();
-    const rows = await convRepo.findByUserId(userId);
-    return rows.slice(offset, offset + limit).map(toConversation);
+    const rows = await convRepo.findByUserId(userId, { limit, offset });
+    return rows.map(toConversation);
   }
 
   async getMessages(conversationId: string, limit = 100, offset = 0): Promise<Message[]> {
     const { msgRepo } = await getRepos();
-    const rows = await msgRepo.findByConversationId(conversationId);
-    return rows.slice(offset, offset + limit).map(toMessage);
+    const rows = await msgRepo.findByConversationId(conversationId, { limit, offset });
+    return rows.map(toMessage);
   }
 
   async getConversation(conversationId: string): Promise<Conversation | undefined> {

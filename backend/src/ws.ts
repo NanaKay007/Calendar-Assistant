@@ -6,6 +6,17 @@ import type { Socket } from 'net';
 
 const MAX_MESSAGE_LENGTH = 4000;
 
+function toFrontendAction(action: any) {
+  return {
+    id: action.id,
+    type: action.actionType,
+    description: action.description,
+    details: action.params,
+    status: action.status,
+    timestamp: action.createdAt,
+  };
+}
+
 export function setupWebSocket(server: HttpServer): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -79,7 +90,10 @@ export function setupWebSocket(server: HttpServer): WebSocketServer {
           message,
           accessToken,
         );
-        ws.send(JSON.stringify({ type: 'reply', data: result }));
+        const data = result.pendingAction
+          ? { ...result, pendingAction: toFrontendAction(result.pendingAction) }
+          : result;
+        ws.send(JSON.stringify({ type: 'reply', data }));
       } catch (error: any) {
         ws.send(JSON.stringify({ type: 'error', error: error.message || 'Chat failed' }));
       }

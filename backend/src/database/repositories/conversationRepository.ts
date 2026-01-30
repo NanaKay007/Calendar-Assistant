@@ -48,8 +48,15 @@ export class ConversationRepository {
     return this.toRow(doc);
   }
 
-  async findByUserId(userId: string): Promise<ConversationRow[]> {
-    const docs = await this.collection.find({ user_id: userId }).sort({ updated_at: -1 }).toArray();
+  async findByUserId(userId: string, options?: { limit?: number; offset?: number }): Promise<ConversationRow[]> {
+    let cursor = this.collection.find({ user_id: userId }).sort({ updated_at: -1 });
+    if (options?.offset) {
+      cursor = cursor.skip(options.offset);
+    }
+    if (options?.limit) {
+      cursor = cursor.limit(options.limit);
+    }
+    const docs = await cursor.toArray();
     return docs.map(d => this.toRow(d)!);
   }
 

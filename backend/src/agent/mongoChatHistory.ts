@@ -16,13 +16,15 @@ export class MongoChatMessageHistory extends BaseListChatMessageHistory {
 
   async getMessages(): Promise<BaseMessage[]> {
     const rows = await this.messageRepo.findByConversationId(this.conversationId);
-    return rows.map((row) => {
-      if (row.role === 'user') {
-        return new HumanMessage(row.content);
-      } else {
-        return new AIMessage(row.content);
-      }
-    });
+    return rows
+      .filter((row) => row.role !== 'tool')
+      .map((row) => {
+        if (row.role === 'user') {
+          return new HumanMessage(row.content);
+        } else {
+          return new AIMessage(row.content);
+        }
+      });
   }
 
   async addMessage(message: BaseMessage): Promise<void> {
