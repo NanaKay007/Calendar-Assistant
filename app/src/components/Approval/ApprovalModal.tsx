@@ -85,10 +85,6 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
         return 'Update Event';
       case 'delete_event':
         return 'Delete Event';
-      case 'add_attendee':
-        return 'Add Attendee';
-      case 'remove_attendee':
-        return 'Remove Attendee';
       default:
         return 'Pending Action';
     }
@@ -110,24 +106,28 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   const renderActionDetails = () => {
     const { details } = action;
 
+    const title = details.summary || details.title;
+    const startTime = details.startDateTime || details.startTime;
+    const endTime = details.endDateTime || details.endTime;
+
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-        {details.title && (
+        {title && (
           <div>
             <span className="text-sm font-medium text-gray-700">Title:</span>
-            <p className="text-sm text-gray-900 mt-1">{details.title}</p>
+            <p className="text-sm text-gray-900 mt-1">{title}</p>
           </div>
         )}
-        {details.startTime && (
+        {startTime && (
           <div>
             <span className="text-sm font-medium text-gray-700">Start:</span>
-            <p className="text-sm text-gray-900 mt-1">{formatDate(details.startTime)}</p>
+            <p className="text-sm text-gray-900 mt-1">{formatDate(startTime)}</p>
           </div>
         )}
-        {details.endTime && (
+        {endTime && (
           <div>
             <span className="text-sm font-medium text-gray-700">End:</span>
-            <p className="text-sm text-gray-900 mt-1">{formatDate(details.endTime)}</p>
+            <p className="text-sm text-gray-900 mt-1">{formatDate(endTime)}</p>
           </div>
         )}
         {details.location && (
@@ -146,6 +146,12 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
           <div>
             <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
             <p className="text-sm text-gray-500 mt-1 font-mono">{details.calendarId}</p>
+          </div>
+        )}
+        {details.eventId && (
+          <div>
+            <span className="text-sm font-medium text-gray-700">Event ID:</span>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{details.eventId}</p>
           </div>
         )}
       </div>

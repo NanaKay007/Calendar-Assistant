@@ -37,11 +37,11 @@ export interface ChatMessage {
 
 export interface PendingAction {
   id: string;
-  type: 'create_event' | 'update_event' | 'delete_event' | 'add_attendee' | 'remove_attendee';
+  type: 'create_event' | 'update_event' | 'delete_event';
   description: string;
-  details: any;
+  details: Record<string, any>;
+  status: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
   timestamp: string;
-  status: 'pending' | 'approved' | 'rejected';
 }
 
 export interface ConversationContext {
