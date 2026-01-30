@@ -40,8 +40,8 @@
 - [x] Wire approval modal to real approve/reject endpoints (PR #13, #14)
 - [x] Align frontend PendingAction types with backend schema, shared `toFrontendAction` utility (PR #14)
 - [x] Authorization on rejectAction endpoint (PR #14)
-- [ ] Connect frontend auth to real backend OAuth flow
-- [ ] Connect calendar views to real backend calendar endpoints
+- [x] Connect frontend auth to real backend OAuth flow (PR #15)
+- [x] Connect calendar views to real backend calendar endpoints (PR #15)
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools

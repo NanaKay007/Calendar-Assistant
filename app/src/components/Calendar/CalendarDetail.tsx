@@ -483,15 +483,21 @@ export function CalendarDetail() {
 
   useEffect(() => {
     if (calendarId) loadCalendarData(calendarId);
-  }, [calendarId]);
+  }, [calendarId, currentDate]);
 
   const loadCalendarData = async (id: string) => {
     setIsLoading(true);
     setError(null);
     try {
+      // Compute date range for the visible period (month view with surrounding weeks)
+      const rangeStart = startOfWeek(startOfMonth(currentDate));
+      const rangeEnd = addDays(endOfWeek(endOfMonth(currentDate)), 1); // +1 day to include end
+      const timeMin = rangeStart.toISOString();
+      const timeMax = rangeEnd.toISOString();
+
       const [calData, eventsData] = await Promise.all([
         calendarService.getCalendar(id),
-        calendarService.getEvents(id),
+        calendarService.getEvents(id, timeMin, timeMax),
       ]);
       setCalendar(calData);
       setEvents(eventsData);
