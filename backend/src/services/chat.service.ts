@@ -81,10 +81,12 @@ export class ChatService {
       }
     }
 
-    // Save user message
+    // Save user message (manual persistence — agent has no checkpointer/memory,
+    // so it does NOT auto-persist messages; this is the sole write path)
     await conversationService.addMessage(convId, 'user', message);
 
     // Build message history for agent using MongoChatMessageHistory
+    // (includes the user message just saved above)
     const db = await getDatabase();
     const messageRepo = new MessageRepository(db);
     const chatHistory = new MongoChatMessageHistory(convId, messageRepo);
@@ -93,7 +95,8 @@ export class ChatService {
     // Call agent
     const agentResult = await callAgent(langchainMessages, accessToken);
 
-    // Save assistant reply
+    // Save assistant reply (manual persistence — no duplication since agent
+    // has no checkpointer and does not auto-persist)
     await conversationService.addMessage(convId, 'assistant', agentResult.reply);
 
     // Check for mutating tool calls → create PendingAction if needed
