@@ -102,7 +102,7 @@ describe('Database Layer', () => {
     });
 
     it('should create and find by id', async () => {
-      const conv = await conversationRepo.create('user-1');
+      const conv = await conversationRepo.create('user-1', 'Test Conversation');
       expect(conv.user_id).toBe('user-1');
       expect(conv.id).toBeDefined();
 
@@ -111,14 +111,14 @@ describe('Database Layer', () => {
     });
 
     it('should find by user id', async () => {
-      await conversationRepo.create('user-1');
-      await conversationRepo.create('user-1');
+      await conversationRepo.create('user-1', 'Test Conversation 1');
+      await conversationRepo.create('user-1', 'Test Conversation 2');
       const convs = await conversationRepo.findByUserId('user-1');
       expect(convs).toHaveLength(2);
     });
 
     it('should update timestamp', async () => {
-      const conv = await conversationRepo.create('user-1');
+      const conv = await conversationRepo.create('user-1', 'Test Conversation');
       await conversationRepo.updateTimestamp(conv.id);
       const after = await conversationRepo.findById(conv.id);
       expect(after!.updated_at).toBeDefined();
@@ -130,7 +130,7 @@ describe('Database Layer', () => {
 
     beforeEach(async () => {
       await userRepo.upsert({ id: 'user-1', email: 'u@test.com', display_name: 'U' });
-      conversationId = (await conversationRepo.create('user-1')).id;
+      conversationId = (await conversationRepo.create('user-1', 'Test Conversation')).id;
     });
 
     it('should create and find messages by conversation', async () => {
@@ -153,7 +153,7 @@ describe('Database Layer', () => {
 
     beforeEach(async () => {
       await userRepo.upsert({ id: 'user-1', email: 'u@test.com', display_name: 'U' });
-      conversationId = (await conversationRepo.create('user-1')).id;
+      conversationId = (await conversationRepo.create('user-1', 'Test Conversation')).id;
     });
 
     it('should create and find by id', async () => {

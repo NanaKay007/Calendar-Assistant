@@ -14,6 +14,13 @@ interface EnvConfig {
     redirectUri: string;
     geminiApiKey: string;
   };
+  llm: {
+    provider: 'gemini' | 'claude';
+  };
+  anthropic: {
+    apiKey: string;
+    model: string;
+  };
   session: {
     secret: string;
   };
@@ -56,5 +63,12 @@ export const config: EnvConfig = {
     }
     return key;
   })(),
+  llm: {
+    provider: (process.env.LLM_PROVIDER || 'gemini') as 'gemini' | 'claude',
+  },
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+  },
   frontendUrl: getEnvVar('FRONTEND_URL', 'http://localhost:5173'),
 };

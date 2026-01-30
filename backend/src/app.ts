@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import session from 'express-session';
+import MongoStore from 'connect-mongo';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { config } from './config/env';
@@ -24,6 +25,14 @@ app.use(
 
 // Session configuration
 export const sessionMiddleware = session({
+  store: MongoStore.create({
+    mongoUrl: config.mongodb.uri,
+    dbName: config.mongodb.dbName,
+    collectionName: 'sessions',
+    crypto: {
+      secret: config.session.secret,
+    },
+  }),
   secret: config.session.secret,
   resave: false,
   saveUninitialized: false,

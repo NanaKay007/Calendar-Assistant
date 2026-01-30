@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/auth.service';
 import { AuthenticatedRequest, ApiResponse, UserInfo } from '../types';
+import { getDatabase, UserRepository } from '../database';
+import { config } from '../config/env';
 
 /**
  * Initiate Google OAuth flow
@@ -42,6 +44,23 @@ export const handleCallback = async (req: Request, res: Response): Promise<void>
 
     // Get user info
     const userInfo = await authService.getUserInfo(tokens.access_token!);
+
+    // Persist user and tokens to MongoDB
+    try {
+      const db = await getDatabase();
+      const userRepo = new UserRepository(db, config.tokenEncryptionKey);
+      await userRepo.upsert({
+        id: userInfo.id,
+        email: userInfo.email,
+        display_name: userInfo.name || userInfo.email,
+        access_token: tokens.access_token!,
+        refresh_token: tokens.refresh_token ?? undefined,
+        token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : undefined,
+      });
+    } catch (dbError) {
+      console.error('Failed to persist user to MongoDB:', dbError);
+      // Don't break the auth flow if DB write fails
+    }
 
     // Store tokens and user info in session
     req.session.tokens = {

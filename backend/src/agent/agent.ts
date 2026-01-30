@@ -1,6 +1,5 @@
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { config } from '../config/env';
+import { createLLM } from './llm';
 import {
   createListCalendarsTool,
   createListEventsTool,
@@ -17,10 +16,7 @@ When the user asks to create, update, or delete events, use the corresponding to
 Always confirm what you're about to do before taking action. Be concise and helpful.`;
 
 export async function createCalendarAgent(accessToken: string) {
-  const llm = new ChatGoogleGenerativeAI({
-    model: 'gemini-3-flash-preview',
-    apiKey: config.google.geminiApiKey,
-  });
+  const llm = createLLM();
 
   const tools = [
     createListCalendarsTool(accessToken),
