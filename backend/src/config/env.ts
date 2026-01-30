@@ -12,6 +12,7 @@ interface EnvConfig {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
+    geminiApiKey: string;
   };
   session: {
     secret: string;
@@ -39,6 +40,7 @@ export const config: EnvConfig = {
     clientId: getEnvVar('GOOGLE_CLIENT_ID'),
     clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
     redirectUri: getEnvVar('GOOGLE_REDIRECT_URI'),
+    geminiApiKey: getEnvVar('GOOGLE_GEMINI_API_KEY'),
   },
   session: {
     secret: getEnvVar('SESSION_SECRET'),
