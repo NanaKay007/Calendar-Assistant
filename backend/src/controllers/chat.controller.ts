@@ -39,7 +39,7 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     const conversationId = param(req, 'id');
-    const conversation = conversationService.getConversation(conversationId);
+    const conversation = await conversationService.getConversation(conversationId);
     if (!conversation) {
       res.status(404).json({ success: false, error: 'Conversation not found' } as ApiResponse);
       return;

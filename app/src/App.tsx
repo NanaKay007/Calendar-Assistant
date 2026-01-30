@@ -7,18 +7,35 @@ import { CalendarDetail } from './components/Calendar/CalendarDetail';
 import { ChatInterface } from './components/Chat/ChatInterface';
 import { authService } from './services/authService';
 
+/**
+ * After Google OAuth, the backend redirects to /auth/success.
+ * This component checks the session and redirects accordingly.
+ */
+function AuthCallback({ onAuth }: { onAuth: () => void }) {
+  useEffect(() => {
+    authService.isAuthenticated().then((ok) => {
+      if (ok) onAuth();
+    });
+  }, [onAuth]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = authService.isAuthenticated();
+    authService.isAuthenticated().then((authenticated) => {
       setIsAuthenticated(authenticated);
       setIsLoading(false);
-    };
-
-    checkAuth();
+    }).catch(() => {
+      setIsLoading(false);
+    });
   }, []);
 
   const handleLoginSuccess = () => {
@@ -45,6 +62,20 @@ function App() {
               <Login onLoginSuccess={handleLoginSuccess} />
             )
           }
+        />
+        <Route
+          path="/auth/success"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/calendars" replace />
+            ) : (
+              <AuthCallback onAuth={handleLoginSuccess} />
+            )
+          }
+        />
+        <Route
+          path="/auth/error"
+          element={<Navigate to="/login" replace />}
         />
         <Route
           path="/"

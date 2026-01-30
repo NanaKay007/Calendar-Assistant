@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import type { User } from '../../types';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,7 +12,11 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const user = authService.getCurrentUser();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    authService.getCurrentUser().then(setUser);
+  }, []);
 
   const handleSignOut = async () => {
     await authService.signOut();
