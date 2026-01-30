@@ -105,7 +105,7 @@ All endpoints proxy to the Google Calendar API using the user's stored OAuth tok
 
 The agent is built using **LangChain.js** with the following components:
 
-- **`ChatGoogleGenerativeAI`** — LLM wrapper for Gemini free tier
+- **Configurable LLM provider** — supports Google Gemini (`ChatGoogleGenerativeAI`) and Anthropic Claude (`ChatAnthropic`), selected via the `LLM_PROVIDER` environment variable (defaults to `gemini`)
 - **`createReactAgent`** (LangGraph) — orchestrates tool-calling loop
 - **`MongoChatMessageHistory`** — MongoDB-backed chat history; manually loaded per request and passed to agent invocation (no auto-persist checkpointer)
 - **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`
@@ -256,7 +256,7 @@ POST /api/chat
           ▼
 ┌──────────────────────────┐
 │ Build ReAct agent:        │
-│  - ChatGoogleGenerativeAI │
+│  - LLM (Gemini or Claude) │
 │  - Calendar tools         │
 │  (no checkpointer)        │
 └─────────┬────────────────┘
@@ -287,5 +287,5 @@ POST /api/chat
 | Frontend        | Vercel                                    |
 | Backend API     | Railway free tier                          |
 | Database        | MongoDB Atlas free tier                    |
-| LLM             | Google Gemini free tier API                |
+| LLM             | Google Gemini free tier API (default) or Anthropic Claude |
 | OAuth           | Google Cloud (no cost for OAuth alone)     |

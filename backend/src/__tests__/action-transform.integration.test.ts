@@ -53,8 +53,8 @@ describe('Action transformation integration', () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }, 15000);
 
-  afterEach(() => {
-    conversationService._clear();
+  afterEach(async () => {
+    await conversationService._clear();
     actionService._clear();
   });
 
@@ -70,7 +70,7 @@ describe('Action transformation integration', () => {
 
   function sendAndReceive(ws: WebSocket, data: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 8000);
       ws.once('message', (raw) => {
         clearTimeout(timeout);
         resolve(JSON.parse(raw.toString()));
@@ -152,7 +152,8 @@ describe('Action transformation integration', () => {
       'Delete event'
     );
 
-    const res = await agent.post(`/api/actions/${created.id}/reject`);
+    const res = await agent.post(`/api/actions/${created.id}/reject`)
+      .set('X-Requested-With', 'XMLHttpRequest');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
 
@@ -174,7 +175,8 @@ describe('Action transformation integration', () => {
       'Delete event'
     );
 
-    const res = await agent.post(`/api/actions/${created.id}/reject`);
+    const res = await agent.post(`/api/actions/${created.id}/reject`)
+      .set('X-Requested-With', 'XMLHttpRequest');
     // Returns 404 intentionally for both "not found" and "unauthorized" to prevent user enumeration
     expect(res.status).toBe(404);
   });
@@ -193,7 +195,8 @@ describe('Action transformation integration', () => {
       'Create event: Approve Transform Test'
     );
 
-    const res = await agent.post(`/api/actions/${created.id}/approve`);
+    const res = await agent.post(`/api/actions/${created.id}/approve`)
+      .set('X-Requested-With', 'XMLHttpRequest');
     // May succeed or fail depending on calendar access, but shape should be correct
     if (res.status === 200) {
       const action = res.body.data;

@@ -23,7 +23,7 @@ export const getConversations = async (req: AuthenticatedRequest, res: Response)
     const limit = parseIntParam(req.query.limit, 50, 1, 100);
     const offset = parseIntParam(req.query.offset, 0, 0, 10000);
 
-    const conversations = conversationService.getConversations(req.user.id, limit, offset);
+    const conversations = await conversationService.getConversations(req.user.id, limit, offset);
     res.json({ success: true, data: conversations } as ApiResponse);
   } catch (error) {
     console.error('Error getting conversations:', error);
@@ -52,7 +52,7 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response): Pro
     const limit = parseIntParam(req.query.limit, 100, 1, 500);
     const offset = parseIntParam(req.query.offset, 0, 0, 100000);
 
-    const messages = conversationService.getMessages(conversationId, limit, offset);
+    const messages = await conversationService.getMessages(conversationId, limit, offset);
     res.json({ success: true, data: messages } as ApiResponse);
   } catch (error) {
     console.error('Error getting messages:', error);

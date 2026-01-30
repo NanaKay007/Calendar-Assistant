@@ -63,4 +63,8 @@ export class ConversationRepository {
   async updateTimestamp(id: string): Promise<void> {
     await this.collection.updateOne({ id }, { $set: { updated_at: new Date().toISOString() } });
   }
+
+  async deleteAll(): Promise<void> {
+    await this.collection.deleteMany({});
+  }
 }
