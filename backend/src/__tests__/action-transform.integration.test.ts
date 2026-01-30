@@ -39,7 +39,10 @@ describe('Action transformation integration', () => {
       });
 
     expect(seedRes.status).toBe(200);
-    sessionCookie = seedRes.headers['set-cookie']?.[0]?.split(';')[0] || '';
+    const cookies = seedRes.headers['set-cookie'];
+    expect(cookies).toBeDefined();
+    sessionCookie = cookies[0].split(';')[0];
+    expect(sessionCookie).toBeTruthy();
   });
 
   afterAll(async () => {
@@ -172,7 +175,7 @@ describe('Action transformation integration', () => {
     );
 
     const res = await agent.post(`/api/actions/${created.id}/reject`);
-    // Controller checks ownership before calling service, returns 404
+    // Returns 404 intentionally for both "not found" and "unauthorized" to prevent user enumeration
     expect(res.status).toBe(404);
   });
 

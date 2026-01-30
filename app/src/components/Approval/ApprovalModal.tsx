@@ -1,4 +1,4 @@
-import type { PendingAction, CreateEventDetails, UpdateEventDetails, DeleteEventDetails } from '../../types';
+import type { PendingAction, CreateEventDetails } from '../../types';
 
 interface ApprovalModalProps {
   action: PendingAction;
@@ -107,11 +107,11 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   };
 
   const renderActionDetails = () => {
-    const details = action.details as CreateEventDetails & UpdateEventDetails & DeleteEventDetails;
+    const details = action.details;
 
-    const title = details.summary;
-    const startTime = details.startDateTime;
-    const endTime = details.endDateTime;
+    const title = 'summary' in details ? (details as CreateEventDetails).summary : undefined;
+    const startTime = 'startDateTime' in details ? (details as CreateEventDetails).startDateTime : undefined;
+    const endTime = 'endDateTime' in details ? (details as CreateEventDetails).endDateTime : undefined;
 
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
