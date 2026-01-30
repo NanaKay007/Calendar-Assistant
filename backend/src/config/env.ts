@@ -12,10 +12,16 @@ interface EnvConfig {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
+    geminiApiKey: string;
   };
   session: {
     secret: string;
   };
+  mongodb: {
+    uri: string;
+    dbName: string;
+  };
+  tokenEncryptionKey: string;
   frontendUrl: string;
 }
 
@@ -34,9 +40,21 @@ export const config: EnvConfig = {
     clientId: getEnvVar('GOOGLE_CLIENT_ID'),
     clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
     redirectUri: getEnvVar('GOOGLE_REDIRECT_URI'),
+    geminiApiKey: getEnvVar('GOOGLE_GEMINI_API_KEY'),
   },
   session: {
     secret: getEnvVar('SESSION_SECRET'),
   },
+  mongodb: {
+    uri: getEnvVar('MONGODB_URI'),
+    dbName: getEnvVar('MONGODB_DB_NAME'),
+  },
+  tokenEncryptionKey: (() => {
+    const key = getEnvVar('TOKEN_ENCRYPTION_KEY');
+    if (Buffer.from(key, 'hex').length !== 32) {
+      throw new Error('TOKEN_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
+    }
+    return key;
+  })(),
   frontendUrl: getEnvVar('FRONTEND_URL', 'http://localhost:5173'),
 };

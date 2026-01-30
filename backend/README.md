@@ -6,6 +6,7 @@ Express TypeScript-based backend API for Calendar Assistant with Google OAuth an
 
 - **Authentication Service**: GSuite OAuth2 authentication
 - **Calendar Service**: Full Google Calendar API integration
+- **Database Layer**: MongoDB-backed persistence for users, conversations, messages, and pending actions
 - **Session Management**: Secure session-based authentication
 - **TypeScript**: Fully typed codebase
 - **RESTful API**: Clean and well-documented endpoints
@@ -14,6 +15,7 @@ Express TypeScript-based backend API for Calendar Assistant with Google OAuth an
 
 - Node.js (v18 or higher)
 - npm or yarn
+- MongoDB (local instance or cloud URI such as MongoDB Atlas)
 - Google Cloud Console project with OAuth 2.0 credentials
 
 ## Setup
@@ -43,7 +45,7 @@ cp .env.dev.local.example .env.dev.local
 cp .env.example .env
 ```
 
-Fill in your Google OAuth credentials in `.env.dev.local`. It also includes a `GOOGLE_TEST_REFRESH_TOKEN` field needed for integration tests (see the [Integration Tests](#integration-tests) section).
+Fill in your Google OAuth credentials in `.env.dev.local`. It also includes `GOOGLE_TEST_REFRESH_TOKEN` (needed for integration tests) and `GOOGLE_GEMINI_API_KEY` (needed for agent features and agent tests). See the [Integration Tests](#integration-tests) section for details.
 
 ### 3. Google Cloud Console Setup
 
@@ -329,6 +331,52 @@ DELETE /api/calendars/:calendarId/events/:eventId
 
 Delete an event from a calendar.
 
+## Database Layer
+
+The app uses MongoDB for persistent storage, suitable for distributed deployments. Configure the connection via environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_DB_NAME` | `calendar-assistant` | Database name |
+
+### Collections
+
+| Collection | Purpose |
+|---|---|
+| `users` | Stores user profiles and OAuth tokens |
+| `conversations` | Chat conversation sessions per user |
+| `messages` | Individual messages within conversations |
+| `pending_actions` | Calendar actions awaiting user approval |
+
+Indexes are created automatically on first connection (e.g., unique index on `users.email`).
+
+### Repository Pattern
+
+Each collection has a corresponding repository class that encapsulates all data access:
+
+- **`UserRepository`** — `upsert`, `findById`, `findByEmail`, `updateTokens`
+- **`ConversationRepository`** — `create`, `findById`, `findByUserId`, `updateTimestamp`
+- **`MessageRepository`** — `create`, `findByConversationId`
+- **`PendingActionRepository`** — `create`, `findById`, `findPendingByConversationId`, `updateStatus`
+
+### Database Tests
+
+The database layer has unit and integration tests using `mongodb-memory-server` (no external MongoDB required):
+
+```bash
+# Unit tests
+npm test -- --testPathPatterns='database.test'
+
+# Integration tests (cross-repository workflows)
+npm test -- --testPathPatterns='database.integration'
+
+# All database tests
+npm test -- --testPathPatterns='database'
+```
+
+These tests verify index creation, CRUD operations, upsert idempotency, token updates, multi-user isolation, and pending action status transitions.
+
 ## Integration Tests
 
 The test suite runs real HTTP requests against the Express app and makes real calls to the Google Calendar API. Nothing is mocked.
@@ -402,6 +450,16 @@ Tests run sequentially (`--runInBand`) with a 30-second timeout per test to acco
 | `DELETE .../events/:eventId` | Deletes the event and confirms it's gone |
 | Validation | Rejects event creation with missing required fields (400) |
 
+#### Agent Integration (`agent.integration.test.ts`)
+
+| Test | What it verifies |
+|---|---|
+| Agent creation | `createCalendarAgent(accessToken)` returns a valid agent |
+| LLM communication | Sends a message and verifies the agent returns a non-empty string response |
+| Tool awareness | Sends "List my calendars" and verifies the agent invokes the `list_calendars` tool |
+
+> **Note:** Agent tests require `GOOGLE_GEMINI_API_KEY` in addition to `GOOGLE_TEST_REFRESH_TOKEN`.
+
 > **Note:** The CRUD lifecycle tests create a temporary event on your real primary calendar. It is automatically deleted at the end of the test run. If a test fails mid-run, you may see a leftover `[Integration Test]` event that can be safely deleted manually.
 
 ### How Auth Bootstrapping Works
@@ -429,10 +487,17 @@ This means the full Express middleware chain — session handling, cookie parsin
 ```
 backend/
 ├── src/
-│   ├── __tests__/               # Integration tests
+│   ├── __tests__/               # Tests
 │   │   ├── setup.ts             # Test auth bootstrapping helper
 │   │   ├── auth.integration.test.ts
-│   │   └── calendar.integration.test.ts
+│   │   ├── calendar.integration.test.ts
+│   │   ├── agent.integration.test.ts
+│   │   ├── database.test.ts     # Database layer unit tests
+│   │   └── database.integration.test.ts  # Database integration tests
+│   ├── agent/                   # LangChain agent with calendar tools
+│   │   ├── agent.ts             # Agent factory (Gemini LLM + tools)
+│   │   ├── index.ts
+│   │   └── tools/               # LangChain tool wrappers for Calendar API
 │   ├── config/
 │   │   └── env.ts               # Environment configuration
 │   ├── controllers/
@@ -443,6 +508,14 @@ backend/
 │   ├── routes/
 │   │   ├── auth.routes.ts
 │   │   └── calendar.routes.ts
+│   ├── database/
+│   │   ├── db.ts                # MongoDB connection and indexes
+│   │   ├── index.ts             # Public exports
+│   │   └── repositories/       # Data access layer
+│   │       ├── userRepository.ts
+│   │       ├── conversationRepository.ts
+│   │       ├── messageRepository.ts
+│   │       └── pendingActionRepository.ts
 │   ├── services/
 │   │   ├── auth.service.ts
 │   │   └── calendar.service.ts
@@ -463,9 +536,11 @@ backend/
 - **Express.js**: Web framework
 - **TypeScript**: Type-safe JavaScript
 - **Google APIs**: OAuth2 and Calendar API
+- **MongoDB**: Document database for distributed-friendly persistence
 - **express-session**: Session management
 - **cors**: Cross-origin resource sharing
 - **dotenv**: Environment variable management
+- **LangChain / LangGraph**: AI agent framework with Gemini LLM
 - **Jest + Supertest**: Integration testing
 
 ## License
