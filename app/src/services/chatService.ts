@@ -50,7 +50,7 @@ class ChatService {
   private ws: WebSocket | null = null;
   private messages: ChatMessage[] = [];
   private pendingActions: PendingAction[] = [];
-  private pendingRequests: Map<number, { resolve: (v: SendResult) => void; reject: (e: Error) => void }> = new Map();
+  private pendingRequests: Map<number, { resolve: (v: SendResult) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }> = new Map();
   private requestCounter = 0;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
@@ -78,12 +78,14 @@ class ChatService {
         return;
       }
 
-      // Resolve the oldest pending request
+      // Resolve the oldest pending request (FIFO is safe here because the backend
+      // processes messages sequentially per WebSocket connection)
       const firstKey = this.pendingRequests.keys().next().value;
       if (firstKey === undefined) return;
 
       const pending = this.pendingRequests.get(firstKey)!;
       this.pendingRequests.delete(firstKey);
+      if (pending.timer) clearTimeout(pending.timer);
 
       if (data.type === 'error') {
         pending.reject(new Error(data.error));
@@ -97,7 +99,6 @@ class ChatService {
         content: response.reply,
         timestamp: new Date().toISOString(),
       };
-      this.messages.push(assistantMessage);
 
       let pendingAction: PendingAction | undefined;
       if (response.pendingAction) {
@@ -112,7 +113,10 @@ class ChatService {
       } as SendResult & { conversationId: string });
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (event) => {
+      if (event.code === 1008) {
+        this.shouldReconnect = false;
+      }
       if (this.shouldReconnect) {
         this.scheduleReconnect();
       }
@@ -140,8 +144,9 @@ class ChatService {
       this.ws.close();
       this.ws = null;
     }
-    // Reject any pending requests
+    // Reject any pending requests and clear their timers
     for (const [, pending] of this.pendingRequests) {
+      if (pending.timer) clearTimeout(pending.timer);
       pending.reject(new Error('Disconnected'));
     }
     this.pendingRequests.clear();
@@ -154,17 +159,15 @@ class ChatService {
         return;
       }
 
-      // Add user message immediately
-      const userMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        role: 'user',
-        content,
-        timestamp: new Date().toISOString(),
-      };
-      this.messages.push(userMessage);
-
       const requestId = this.requestCounter++;
-      this.pendingRequests.set(requestId, { resolve: resolve as any, reject });
+      const timer = setTimeout(() => {
+        const req = this.pendingRequests.get(requestId);
+        if (req) {
+          this.pendingRequests.delete(requestId);
+          req.reject(new Error('Request timed out'));
+        }
+      }, 30000);
+      this.pendingRequests.set(requestId, { resolve: resolve as any, reject, timer });
 
       const payload: any = { type: 'send_message', message: content };
       if (conversationId) {

@@ -96,7 +96,7 @@ export function ChatInterface() {
         content: 'Action approved and executed successfully!',
         timestamp: new Date().toISOString(),
       };
-      setMessages([...chatService.getMessages(), confirmationMessage]);
+      setMessages(prev => [...prev, confirmationMessage]);
     } catch (error) {
       console.error('Error approving action:', error);
     }
@@ -114,7 +114,7 @@ export function ChatInterface() {
         content: 'Action rejected. How else can I help you?',
         timestamp: new Date().toISOString(),
       };
-      setMessages([...chatService.getMessages(), confirmationMessage]);
+      setMessages(prev => [...prev, confirmationMessage]);
     } catch (error) {
       console.error('Error rejecting action:', error);
     }
