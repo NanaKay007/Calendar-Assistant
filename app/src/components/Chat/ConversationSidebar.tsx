@@ -5,12 +5,14 @@ interface ConversationSidebarProps {
   currentConversationId: string | undefined;
   onSelectConversation: (conversationId: string) => void;
   onNewConversation: () => void;
+  refreshTrigger?: number;
 }
 
 export function ConversationSidebar({
   currentConversationId,
   onSelectConversation,
   onNewConversation,
+  refreshTrigger,
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,14 +44,14 @@ export function ConversationSidebar({
     return () => controller.abort();
   }, []);
 
-  // Refresh the list when the current conversation changes (e.g. new conversation created)
+  // Refresh the list only when explicitly triggered (e.g. new conversation created)
   useEffect(() => {
-    if (currentConversationId) {
+    if (refreshTrigger && refreshTrigger > 0) {
       const controller = new AbortController();
       fetchConversations(controller.signal);
       return () => controller.abort();
     }
-  }, [currentConversationId]);
+  }, [refreshTrigger]);
 
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -97,7 +99,7 @@ export function ConversationSidebar({
           <div className="p-4 text-center text-red-400 text-sm">
             {error}
             <button
-              onClick={fetchConversations}
+              onClick={() => fetchConversations()}
               className="block mx-auto mt-2 text-blue-400 hover:text-blue-300 text-xs"
             >
               Retry

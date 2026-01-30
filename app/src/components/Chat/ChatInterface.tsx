@@ -19,6 +19,7 @@ export function ChatInterface() {
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [selectedAction, setSelectedAction] = useState<PendingAction | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
@@ -90,6 +91,8 @@ export function ChatInterface() {
       const result = await chatService.sendMessage(userInput, conversationId);
       if (result.conversationId && !conversationId) {
         setConversationId(result.conversationId);
+        // Trigger sidebar refresh when a new conversation is created
+        setSidebarRefreshTrigger(prev => prev + 1);
       }
       setMessages(prev => [...prev, result.message]);
 
@@ -169,6 +172,7 @@ export function ChatInterface() {
         currentConversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        refreshTrigger={sidebarRefreshTrigger}
       />
 
       <div className="flex flex-col flex-1 min-w-0">
