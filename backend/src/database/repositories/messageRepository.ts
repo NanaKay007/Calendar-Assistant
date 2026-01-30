@@ -42,6 +42,14 @@ export class MessageRepository {
     return { id, ...message, created_at: now };
   }
 
+  async bulkCreate(messages: { conversation_id: string; role: 'user' | 'assistant' | 'tool'; content: string }[]): Promise<MessageRow[]> {
+    if (messages.length === 0) return [];
+    const now = new Date().toISOString();
+    const docs = messages.map(m => ({ id: crypto.randomUUID(), ...m, created_at: now }));
+    await this.collection.insertMany(docs);
+    return docs.map(d => ({ id: d.id, conversation_id: d.conversation_id, role: d.role, content: d.content, created_at: d.created_at }));
+  }
+
   async findByConversationId(conversationId: string, options?: { limit?: number; offset?: number }): Promise<MessageRow[]> {
     let cursor = this.collection.find({ conversation_id: conversationId }).sort({ created_at: 1 });
     if (options?.offset) {

@@ -37,9 +37,13 @@ export class MongoChatMessageHistory extends BaseListChatMessageHistory {
   }
 
   async addMessages(messages: BaseMessage[]): Promise<void> {
-    for (const message of messages) {
-      await this.addMessage(message);
-    }
+    if (messages.length === 0) return;
+    const docs = messages.map((message) => ({
+      conversation_id: this.conversationId,
+      role: (message._getType() === 'human' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
+    }));
+    await this.messageRepo.bulkCreate(docs);
   }
 
   async clear(): Promise<void> {
