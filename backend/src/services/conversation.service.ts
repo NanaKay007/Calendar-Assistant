@@ -3,14 +3,16 @@ import { getDatabase } from '../database/db';
 import { ConversationRepository, ConversationRow } from '../database/repositories/conversationRepository';
 import { MessageRepository, MessageRow } from '../database/repositories/messageRepository';
 
-let repos: { convRepo: ConversationRepository; msgRepo: MessageRepository } | null = null;
+let reposPromise: Promise<{ convRepo: ConversationRepository; msgRepo: MessageRepository }> | null = null;
 
 async function getRepos() {
-  if (!repos) {
-    const db = await getDatabase();
-    repos = { convRepo: new ConversationRepository(db), msgRepo: new MessageRepository(db) };
+  if (!reposPromise) {
+    reposPromise = (async () => {
+      const db = await getDatabase();
+      return { convRepo: new ConversationRepository(db), msgRepo: new MessageRepository(db) };
+    })();
   }
-  return repos;
+  return reposPromise;
 }
 
 function toConversation(row: ConversationRow): Conversation {
@@ -67,7 +69,7 @@ export class ConversationService {
 
   /** For testing: clear all data */
   _clear(): void {
-    repos = null;
+    reposPromise = null;
   }
 }
 

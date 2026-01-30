@@ -14,8 +14,8 @@ export class MongoChatMessageHistory extends BaseListChatMessageHistory {
     this.messageRepo = messageRepo;
   }
 
-  async getMessages(): Promise<BaseMessage[]> {
-    const rows = await this.messageRepo.findByConversationId(this.conversationId);
+  async getMessages(limit = 50): Promise<BaseMessage[]> {
+    const rows = await this.messageRepo.findByConversationId(this.conversationId, { limit });
     return rows
       .filter((row) => row.role !== 'tool')
       .map((row) => {

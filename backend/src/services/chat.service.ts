@@ -97,7 +97,11 @@ export class ChatService {
 
     // Save assistant reply (manual persistence — no duplication since agent
     // has no checkpointer and does not auto-persist)
-    await conversationService.addMessage(convId, 'assistant', agentResult.reply);
+    try {
+      await conversationService.addMessage(convId, 'assistant', agentResult.reply);
+    } catch (err) {
+      console.error('Failed to persist assistant reply:', err);
+    }
 
     // Check for mutating tool calls → create PendingAction if needed
     const response: ChatResponse = {
