@@ -5,6 +5,7 @@ import cors from 'cors';
 import { config } from './config/env';
 import authRoutes from './routes/auth.routes';
 import calendarRoutes from './routes/calendar.routes';
+import chatRoutes from './routes/chat.routes';
 
 const app = express();
 
@@ -67,6 +68,7 @@ if (process.env.NODE_ENV === 'test') {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/calendars', calendarRoutes);
+app.use('/api', chatRoutes);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
@@ -77,6 +79,9 @@ app.get('/', (req: Request, res: Response) => {
       health: '/health',
       auth: '/api/auth',
       calendars: '/api/calendars',
+      chat: '/api/chat',
+      conversations: '/api/conversations',
+      actions: '/api/actions',
     },
   });
 });
