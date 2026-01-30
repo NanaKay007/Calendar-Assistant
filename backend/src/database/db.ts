@@ -10,12 +10,18 @@ export async function getDatabase(): Promise<Db> {
   // that only use createTestDatabase and don't need the full app config).
   const { config } = await import('../config/env');
 
-  client = new MongoClient(config.mongodb.uri);
-  await client.connect();
-  db = client.db(config.mongodb.dbName);
-
-  await initializeIndexes(db);
-  return db;
+  const newClient = new MongoClient(config.mongodb.uri);
+  try {
+    await newClient.connect();
+    const newDb = newClient.db(config.mongodb.dbName);
+    await initializeIndexes(newDb);
+    client = newClient;
+    db = newDb;
+    return db;
+  } catch (error) {
+    await newClient.close().catch(() => {});
+    throw error;
+  }
 }
 
 export async function createTestDatabase(mongoClient: MongoClient): Promise<Db> {

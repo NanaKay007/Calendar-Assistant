@@ -20,6 +20,7 @@ interface EnvConfig {
     uri: string;
     dbName: string;
   };
+  tokenEncryptionKey: string;
   frontendUrl: string;
 }
 
@@ -46,5 +47,6 @@ export const config: EnvConfig = {
     uri: getEnvVar('MONGODB_URI'),
     dbName: getEnvVar('MONGODB_DB_NAME'),
   },
+  tokenEncryptionKey: getEnvVar('TOKEN_ENCRYPTION_KEY'),
   frontendUrl: getEnvVar('FRONTEND_URL', 'http://localhost:5173'),
 };

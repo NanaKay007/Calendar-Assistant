@@ -1,5 +1,6 @@
 import { MongoClient, Db } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import crypto from 'crypto';
 import { createTestDatabase } from '../database/db';
 import { UserRepository } from '../database/repositories/userRepository';
 import { ConversationRepository } from '../database/repositories/conversationRepository';
@@ -14,6 +15,7 @@ describe('Database Layer', () => {
   let conversationRepo: ConversationRepository;
   let messageRepo: MessageRepository;
   let pendingActionRepo: PendingActionRepository;
+  const testEncryptionKey = crypto.randomBytes(32).toString('hex');
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -33,7 +35,7 @@ describe('Database Layer', () => {
       await client.db('calendar-assistant-test').dropCollection(col.name);
     }
     db = await createTestDatabase(client);
-    userRepo = new UserRepository(db);
+    userRepo = new UserRepository(db, testEncryptionKey);
     conversationRepo = new ConversationRepository(db);
     messageRepo = new MessageRepository(db);
     pendingActionRepo = new PendingActionRepository(db);

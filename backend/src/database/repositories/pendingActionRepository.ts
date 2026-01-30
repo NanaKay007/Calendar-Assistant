@@ -1,5 +1,15 @@
-import { Db } from 'mongodb';
+import { Db, WithId, Document } from 'mongodb';
 import crypto from 'crypto';
+
+interface PendingActionDocument extends Document {
+  id: string;
+  conversation_id: string;
+  action_type: string;
+  action_payload: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  resolved_at: string | null;
+}
 
 export interface PendingActionRow {
   id: string;
@@ -15,10 +25,10 @@ export class PendingActionRepository {
   constructor(private db: Db) {}
 
   private get collection() {
-    return this.db.collection('pending_actions');
+    return this.db.collection<PendingActionDocument>('pending_actions');
   }
 
-  private toRow(doc: any): PendingActionRow | undefined {
+  private toRow(doc: WithId<PendingActionDocument> | PendingActionDocument | null): PendingActionRow | undefined {
     if (!doc) return undefined;
     return {
       id: doc.id,
@@ -58,7 +68,11 @@ export class PendingActionRepository {
   }
 
   async updateStatus(id: string, status: 'approved' | 'rejected'): Promise<PendingActionRow | undefined> {
-    await this.collection.updateOne({ id }, { $set: { status, resolved_at: new Date().toISOString() } });
-    return this.findById(id);
+    const doc = await this.collection.findOneAndUpdate(
+      { id },
+      { $set: { status, resolved_at: new Date().toISOString() } },
+      { returnDocument: 'after' }
+    );
+    return this.toRow(doc);
   }
 }

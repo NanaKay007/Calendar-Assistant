@@ -1,5 +1,12 @@
-import { Db } from 'mongodb';
+import { Db, WithId, Document } from 'mongodb';
 import crypto from 'crypto';
+
+interface ConversationDocument extends Document {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface ConversationRow {
   id: string;
@@ -12,10 +19,10 @@ export class ConversationRepository {
   constructor(private db: Db) {}
 
   private get collection() {
-    return this.db.collection('conversations');
+    return this.db.collection<ConversationDocument>('conversations');
   }
 
-  private toRow(doc: any): ConversationRow | undefined {
+  private toRow(doc: WithId<ConversationDocument> | ConversationDocument | null): ConversationRow | undefined {
     if (!doc) return undefined;
     return {
       id: doc.id,
