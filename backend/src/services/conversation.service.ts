@@ -6,14 +6,16 @@ const conversations = new Map<string, Conversation>();
 const messages = new Map<string, Message[]>(); // conversationId -> messages
 
 export class ConversationService {
-  getConversations(userId: string): Conversation[] {
+  getConversations(userId: string, limit = 50, offset = 0): Conversation[] {
     return Array.from(conversations.values())
       .filter((c) => c.userId === userId)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(offset, offset + limit);
   }
 
-  getMessages(conversationId: string): Message[] {
-    return messages.get(conversationId) || [];
+  getMessages(conversationId: string, limit = 100, offset = 0): Message[] {
+    const msgs = messages.get(conversationId) || [];
+    return msgs.slice(offset, offset + limit);
   }
 
   getConversation(conversationId: string): Conversation | undefined {

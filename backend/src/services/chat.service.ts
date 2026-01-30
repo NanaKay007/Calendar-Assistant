@@ -1,6 +1,8 @@
 import { ChatResponse, ActionType } from '../types';
 import { conversationService } from './conversation.service';
 import { actionService } from './action.service';
+import { createCalendarAgent } from '../agent';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 
 // Mutating tool calls that require HITL approval
 const MUTATING_ACTIONS: Record<string, ActionType> = {
@@ -10,20 +12,51 @@ const MUTATING_ACTIONS: Record<string, ActionType> = {
 };
 
 /**
- * Stub for the agent call. Will be replaced by LangChain/Gemini integration.
- * Returns a simulated agent response, optionally with a detected tool call.
+ * Call the LangChain ReAct agent with conversation history.
  */
-function callAgent(
-  _messages: Array<{ role: string; content: string }>,
-  _accessToken: string
-): {
+async function callAgent(
+  messages: Array<{ role: string; content: string }>,
+  accessToken: string
+): Promise<{
   reply: string;
   toolCall?: { name: string; params: Record<string, any>; description: string };
-} {
-  // TODO: Replace with real LangChain agent invocation
-  return {
-    reply: 'I understand your request. This is a placeholder response — the AI agent is not yet connected.',
-  };
+}> {
+  const agent = await createCalendarAgent(accessToken);
+
+  const langchainMessages = messages.map((m) =>
+    m.role === 'user' ? new HumanMessage(m.content) : new AIMessage(m.content)
+  );
+
+  const result = await agent.invoke({ messages: langchainMessages });
+
+  // Extract final AI reply
+  const lastMessage = result.messages[result.messages.length - 1];
+  const reply = typeof lastMessage.content === 'string'
+    ? lastMessage.content
+    : JSON.stringify(lastMessage.content);
+
+  // Scan tool messages for pendingAction
+  let toolCall: { name: string; params: Record<string, any>; description: string } | undefined;
+
+  for (const msg of result.messages) {
+    if (typeof (msg as any)._getType === 'function' && (msg as any)._getType() === 'tool') {
+      try {
+        const parsed = JSON.parse(typeof msg.content === 'string' ? msg.content : '');
+        if (parsed.pendingAction === true) {
+          toolCall = {
+            name: parsed.actionType,
+            params: parsed.payload,
+            description: `${parsed.actionType}: ${JSON.stringify(parsed.payload)}`,
+          };
+          break;
+        }
+      } catch {
+        // Not JSON or no pendingAction — skip
+      }
+    }
+  }
+
+  return { reply, toolCall };
 }
 
 export class ChatService {
@@ -58,8 +91,8 @@ export class ChatService {
       content: m.content,
     }));
 
-    // Call agent (stubbed)
-    const agentResult = callAgent(history, accessToken);
+    // Call agent
+    const agentResult = await callAgent(history, accessToken);
 
     // Save assistant reply
     conversationService.addMessage(convId, 'assistant', agentResult.reply);

@@ -4,8 +4,16 @@ import { chatService } from '../services/chat.service';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
 
+const MAX_MESSAGE_LENGTH = 4000;
+
 const param = (req: AuthenticatedRequest, name: string): string =>
   req.params[name] as string;
+
+const parseIntParam = (value: unknown, defaultVal: number, min = 0, max = 100): number => {
+  const n = Number(value);
+  if (isNaN(n)) return defaultVal;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+};
 
 export const sendMessage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -14,9 +22,21 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const { message, conversationId } = req.body;
+    let { message } = req.body;
+    const { conversationId } = req.body;
+
     if (!message || typeof message !== 'string') {
       res.status(400).json({ success: false, error: 'message is required' } as ApiResponse);
+      return;
+    }
+
+    message = message.trim();
+    if (message.length === 0) {
+      res.status(400).json({ success: false, error: 'message is required' } as ApiResponse);
+      return;
+    }
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      res.status(400).json({ success: false, error: `message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` } as ApiResponse);
       return;
     }
 
@@ -48,7 +68,10 @@ export const getConversations = async (req: AuthenticatedRequest, res: Response)
       return;
     }
 
-    const conversations = conversationService.getConversations(req.user.id);
+    const limit = parseIntParam(req.query.limit, 50, 1, 100);
+    const offset = parseIntParam(req.query.offset, 0, 0, 10000);
+
+    const conversations = conversationService.getConversations(req.user.id, limit, offset);
     res.json({ success: true, data: conversations } as ApiResponse);
   } catch (error) {
     console.error('Error getting conversations:', error);
@@ -74,7 +97,10 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const messages = conversationService.getMessages(conversationId);
+    const limit = parseIntParam(req.query.limit, 100, 1, 500);
+    const offset = parseIntParam(req.query.offset, 0, 0, 100000);
+
+    const messages = conversationService.getMessages(conversationId, limit, offset);
     res.json({ success: true, data: messages } as ApiResponse);
   } catch (error) {
     console.error('Error getting messages:', error);
