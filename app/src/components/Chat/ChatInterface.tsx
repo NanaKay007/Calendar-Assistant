@@ -11,10 +11,8 @@ export function ChatInterface() {
   const [selectedAction, setSelectedAction] = useState<PendingAction | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
-
   useEffect(() => {
-    chatService.connect();
+    // Load initial message
     const initialMessage: ChatMessage = {
       id: 'initial',
       role: 'assistant',
@@ -22,9 +20,6 @@ export function ChatInterface() {
       timestamp: new Date().toISOString(),
     };
     setMessages([initialMessage]);
-    return () => {
-      chatService.disconnect();
-    };
   }, []);
 
   useEffect(() => {
@@ -42,36 +37,16 @@ export function ChatInterface() {
     setInputValue('');
     setIsLoading(true);
 
-    // Add user message to local state immediately
-    const userMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      role: 'user',
-      content: userInput,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-
     try {
-      const result = await chatService.sendMessage(userInput, conversationId);
-      if (result.conversationId) {
-        setConversationId(result.conversationId);
-      }
-      // Add assistant message to local state
-      setMessages(prev => [...prev, result.message]);
+      const { pendingAction } = await chatService.sendMessage(userInput);
+      setMessages(chatService.getMessages());
 
-      if (result.pendingAction) {
+      if (pendingAction) {
         setPendingActions([...chatService.getPendingActions()]);
-        setSelectedAction(result.pendingAction);
+        setSelectedAction(pendingAction);
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage: ChatMessage = {
-        id: `msg_${Date.now()}_err`,
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +71,7 @@ export function ChatInterface() {
         content: 'Action approved and executed successfully!',
         timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, confirmationMessage]);
+      setMessages([...chatService.getMessages(), confirmationMessage]);
     } catch (error) {
       console.error('Error approving action:', error);
     }
@@ -114,7 +89,7 @@ export function ChatInterface() {
         content: 'Action rejected. How else can I help you?',
         timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, confirmationMessage]);
+      setMessages([...chatService.getMessages(), confirmationMessage]);
     } catch (error) {
       console.error('Error rejecting action:', error);
     }
