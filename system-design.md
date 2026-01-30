@@ -90,6 +90,8 @@ Google OAuth   Google Calendar    LangChain TS Agent
 
 **Flow:** Frontend redirects to `/auth/login` → Google consent screen → callback stores tokens → frontend receives session cookie/JWT.
 
+**Session persistence:** Sessions are stored in MongoDB via `connect-mongo` (collection: `sessions`), ensuring sessions survive server restarts.
+
 ### 2. Calendar Service
 
 | Method | Endpoint                          | Description                                   |
