@@ -2,38 +2,28 @@
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   Frontend (SPA)                     │
-│         React / Next.js (static export)              │
-│  ┌───────────┐ ┌───────────┐ ┌────────────────────┐ │
-│  │ Auth View │ │ Calendar  │ │  Chat Panel         │ │
-│  │           │ │ Dashboard │ │  (collapsible side  │ │
-│  │           │ │           │ │   panel / mobile    │ │
-│  │           │ │           │ │   full-screen       │ │
-│  │           │ │           │ │   overlay, HITL     │ │
-│  │           │ │           │ │   approval UI)      │ │
-│  └───────────┘ └───────────┘ └────────────────────┘ │
-└────────────────────┬────────────────────────────────┘
-                     │ HTTPS
-┌────────────────────▼────────────────────────────────┐
-│                 Backend API                          │
-│          Node.js (Express / Next.js API)             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────────┐ │
-│  │ Auth     │ │ Calendar │ │  Agent / Chat        │ │
-│  │ Service  │ │ Service  │ │  Service (LangChain) │ │
-│  └──────────┘ └──────────┘ └──────────────────────┘ │
-└───┬──────────────┬──────────────────┬───────────────┘
-    │              │                  │
-    ▼              ▼                  ▼
-Google OAuth   Google Calendar    LangChain TS Agent
-  2.0 API        API              + LLM Provider
-                                  (e.g. Gemini free tier)
-                                      │
-                                      ▼
-                               MongoDB
-                              (conversations, pending
-                               actions, sessions)
+```mermaid
+graph TD
+    subgraph Frontend["Frontend (SPA) — React 19 / Vite / Tailwind"]
+        AuthView[Auth View]
+        CalendarDash[Calendar Dashboard]
+        ChatPanel["Chat Panel<br/>(collapsible side panel /<br/>mobile full-screen overlay,<br/>HITL approval UI)"]
+    end
+
+    Frontend -->|"Same-origin HTTP + WebSocket"| Backend
+
+    subgraph Backend["Backend API — Node.js / Express 5"]
+        AuthSvc[Auth Service]
+        CalSvc[Calendar Service]
+        ChatSvc["Agent / Chat Service<br/>(LangChain)"]
+    end
+
+    AuthSvc --> GoogleOAuth[Google OAuth 2.0 API]
+    CalSvc --> GoogleCal[Google Calendar API]
+    ChatSvc --> LLM["LLM Provider<br/>(Gemini / Claude)"]
+
+    AuthSvc --> MongoDB
+    ChatSvc --> MongoDB["MongoDB<br/>(users, sessions, conversations,<br/>messages, pending actions)"]
 ```
 
 ## Data Models
@@ -172,75 +162,82 @@ The agent is built using **LangChain.js** with the following components:
 
 ### Authentication Flow
 
-```
-User          Frontend         Backend           Google
- │               │                │                │
- │──click login─▶│                │                │
- │               │──GET /auth/login──▶             │
- │               │◀─redirect URL──│                │
- │◀──redirect────│                │                │
- │──consent──────────────────────────────────────▶│
- │◀─────────────────────auth code─────────────────│
- │──callback─────▶               │                │
- │               │──GET /auth/callback?code=──────▶│
- │               │               │──exchange code─▶│
- │               │               │◀─tokens────────│
- │               │               │ (store tokens)  │
- │               │◀─session/JWT──│                │
- │◀──logged in───│               │                │
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant Backend
+    participant Google
+
+    User->>Frontend: Click login
+    Frontend->>Backend: GET /auth/login
+    Backend-->>Frontend: Redirect URL
+    Frontend-->>User: Redirect to Google
+    User->>Google: Consent
+    Google-->>User: Auth code
+    User->>Frontend: Callback
+    Frontend->>Backend: GET /auth/callback?code=
+    Backend->>Google: Exchange code
+    Google-->>Backend: Tokens
+    Note over Backend: Store tokens in session
+    Backend-->>Frontend: Session cookie
+    Frontend-->>User: Logged in
 ```
 
 ### Calendar Viewing Flow
 
-```
-User          Frontend              Backend          Google Calendar API
- │               │                     │                    │
- │──view cals───▶│                     │                    │
- │               │──GET /api/calendars─▶                    │
- │               │                     │──list calendars───▶│
- │               │                     │◀─calendar list─────│
- │               │◀─calendars JSON─────│                    │
- │◀──render──────│                     │                    │
- │               │                     │                    │
- │──click cal───▶│                     │                    │
- │               │──GET /api/calendars/{id}/events─────────▶│
- │               │                     │──list events──────▶│
- │               │                     │◀─events───────────│
- │               │◀─events JSON────────│                    │
- │◀──render──────│                     │                    │
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant Backend
+    participant GoogleCal as Google Calendar API
+
+    User->>Frontend: View calendars
+    Frontend->>Backend: GET /api/calendars
+    Backend->>GoogleCal: List calendars
+    GoogleCal-->>Backend: Calendar list
+    Backend-->>Frontend: Calendars JSON
+    Frontend-->>User: Render calendar list
+
+    User->>Frontend: Click calendar
+    Frontend->>Backend: GET /api/calendars/{id}/events
+    Backend->>GoogleCal: List events
+    GoogleCal-->>Backend: Events
+    Backend-->>Frontend: Events JSON
+    Frontend-->>User: Render calendar view
 ```
 
 ### Chat with Human-In-The-Loop Flow
 
-```
-User          Frontend              Backend             LLM           Google Cal API
- │               │                     │                  │                │
- │──"schedule    │                     │                  │                │
- │  meeting"────▶│                     │                  │                │
- │               │──WS send_message───▶                   │                │
- │               │                     │──prompt + ───────▶                │
- │               │                     │  conversation    │                │
- │               │                     │  history         │                │
- │               │                     │◀─tool call───────│                │
- │               │                     │  (create_event)  │                │
- │               │                     │                  │                │
- │               │                     │ (save PendingAction)              │
- │               │◀─reply + pending────│                  │                │
- │◀──show action │  action             │                  │                │
- │   for approval│                     │                  │                │
- │               │                     │                  │                │
- │──approve─────▶│                     │                  │                │
- │               │──POST /api/actions/{id}/approve────────▶                │
- │               │                     │──create event────────────────────▶│
- │               │                     │◀─event created───────────────────│
- │               │◀─confirmation───────│                  │                │
- │◀──"Done!"─────│                     │                  │                │
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant Backend
+    participant LLM
+    participant GoogleCal as Google Calendar API
+
+    User->>Frontend: "Schedule meeting"
+    Frontend->>Backend: WS send_message
+    Backend->>LLM: Prompt + conversation history
+    LLM-->>Backend: Tool call (create_event)
+    Note over Backend: Save PendingAction to MongoDB
+    Backend-->>Frontend: Reply + pending action
+    Frontend-->>User: Show action for approval
+
+    User->>Frontend: Approve
+    Frontend->>Backend: POST /api/actions/{id}/approve
+    Backend->>GoogleCal: Create event
+    GoogleCal-->>Backend: Event created
+    Backend-->>Frontend: Confirmation
+    Frontend-->>User: "Done!"
 ```
 
 ### Conversation Memory Flow (LangChain)
 
 ```
-POST /api/chat
+WS /ws (send_message)
      │
      ▼
 ┌──────────────────────────┐
@@ -302,25 +299,13 @@ POST /api/chat
 
 Single-service deployment on Railway — the Express backend serves the built React SPA as static files, eliminating cross-origin complexity.
 
-```
-┌─────────────────────────────────┐
-│      Railway (Single Service)   │
-│  ┌───────────────────────────┐  │
-│  │  Express Backend          │  │
-│  │  - API routes (/api/*)    │  │
-│  │  - WebSocket (/ws)        │  │
-│  │  - Static files (app/dist)│  │
-│  │  - SPA fallback           │  │
-│  └─────────────┬─────────────┘  │
-│                │                │
-└────────────────┼────────────────┘
-                 │
-                 ▼
-       ┌──────────────────────┐
-       │  MongoDB Atlas (M0)   │
-       │  Sessions, Users,     │
-       │  Conversations, etc.  │
-       └──────────────────────┘
+```mermaid
+graph TD
+    subgraph Railway["Railway (Single Service)"]
+        Express["Express Backend<br/>• API routes (/api/*)<br/>• WebSocket (/ws)<br/>• Static files (app/dist)<br/>• SPA fallback"]
+    end
+
+    Express --> Mongo["MongoDB Atlas (M0)<br/>Sessions, Users,<br/>Conversations, Pending Actions"]
 ```
 
 ### Production Configuration
