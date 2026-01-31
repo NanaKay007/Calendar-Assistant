@@ -67,7 +67,18 @@ export const getPendingActions = async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const actions = actionService.getPendingActions(req.user.id);
+    let actions = actionService.getPendingActions(req.user.id);
+
+    // Support optional conversationId filter
+    const conversationId = req.query.conversationId;
+    if (typeof conversationId === 'string' && conversationId.length > 0) {
+      if (!/^[a-zA-Z0-9_-]{1,64}$/.test(conversationId)) {
+        res.status(400).json({ success: false, error: 'Invalid conversationId format' } as ApiResponse);
+        return;
+      }
+      actions = actions.filter((a) => a.conversationId === conversationId);
+    }
+
     res.json({ success: true, data: actions.map(toFrontendAction) } as ApiResponse);
   } catch (error) {
     console.error('Error getting pending actions:', error);

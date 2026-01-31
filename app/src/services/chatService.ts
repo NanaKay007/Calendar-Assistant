@@ -284,6 +284,39 @@ class ChatService {
     }
   }
 
+  async fetchPendingActions(conversationId: string): Promise<PendingAction[]> {
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(conversationId)) {
+      return [];
+    }
+    const response = await fetch(`/api/actions/pending?conversationId=${encodeURIComponent(conversationId)}`, {
+      credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!response.ok) {
+      console.error('Failed to fetch pending actions:', response.statusText);
+      return [];
+    }
+    const body = await response.json();
+    if (!body.success || !Array.isArray(body.data)) {
+      return [];
+    }
+    const actions: PendingAction[] = body.data.map((a: any) => ({
+      id: a.id,
+      type: a.type,
+      description: a.description,
+      details: a.details,
+      timestamp: a.timestamp,
+      status: a.status,
+    }));
+    // Merge into internal state so approve/reject can find them
+    for (const action of actions) {
+      if (!this.pendingActions.find(p => p.id === action.id)) {
+        this.pendingActions.push(action);
+      }
+    }
+    return actions.filter(a => a.status === 'pending');
+  }
+
   clearHistory(): void {
     this.messages = [];
     this.pendingActions = [];
