@@ -2,7 +2,7 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { DateTime, Duration } from 'luxon';
 
-export function createDateTimeMathTool() {
+export function createDateTimeMathTool(clientTimezone?: string) {
   return tool(
     async (input) => {
       const { operation } = input;
@@ -10,7 +10,10 @@ export function createDateTimeMathTool() {
       switch (operation) {
         case 'add':
         case 'subtract': {
-          const dt = DateTime.fromISO(input.datetime!);
+          let dt = DateTime.fromISO(input.datetime!);
+          if (clientTimezone && !input.datetime!.match(/[+-]\d{2}:\d{2}$|Z$/)) {
+            dt = DateTime.fromISO(input.datetime!, { zone: clientTimezone });
+          }
           if (!dt.isValid) return JSON.stringify({ error: `Invalid datetime: ${input.datetime}` });
 
           const dur = Duration.fromObject({

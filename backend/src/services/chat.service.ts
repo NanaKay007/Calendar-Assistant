@@ -19,12 +19,13 @@ const MUTATING_ACTIONS: Record<string, ActionType> = {
  */
 async function callAgent(
   langchainMessages: BaseMessage[],
-  accessToken: string
+  accessToken: string,
+  timezone?: string
 ): Promise<{
   reply: string;
   toolCalls: { name: string; params: Record<string, any>; description: string }[];
 }> {
-  const agent = await createCalendarAgent(accessToken);
+  const agent = await createCalendarAgent(accessToken, timezone);
 
   const result = await agent.invoke({ messages: langchainMessages });
 
@@ -62,7 +63,8 @@ export class ChatService {
     userId: string,
     conversationId: string | null,
     message: string,
-    accessToken: string
+    accessToken: string,
+    timezone?: string
   ): Promise<ChatResponse> {
     // Load or create conversation
     let convId = conversationId;
@@ -92,7 +94,7 @@ export class ChatService {
     const langchainMessages = await chatHistory.getMessages();
 
     // Call agent
-    const agentResult = await callAgent(langchainMessages, accessToken);
+    const agentResult = await callAgent(langchainMessages, accessToken, timezone);
 
     // Save assistant reply (manual persistence — no duplication since agent
     // has no checkpointer and does not auto-persist)

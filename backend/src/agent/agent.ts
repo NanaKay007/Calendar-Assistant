@@ -23,19 +23,19 @@ When the user asks to create, update, or delete events, use the corresponding to
 
 Always confirm what you're about to do before taking action. Be concise and helpful. All times to be displayed to the user must be in their local time always unless they specify otherwise.`;
 
-export async function createCalendarAgent(accessToken: string) {
+export async function createCalendarAgent(accessToken: string, timezone?: string) {
   const llm = createLLM();
 
   const tools = [
-    createGetCurrentDateTimeTool(),
+    createGetCurrentDateTimeTool(timezone),
     createListCalendarsTool(accessToken),
-    createListEventsTool(accessToken),
-    createSearchEventsTool(accessToken),
+    createListEventsTool(accessToken, timezone),
+    createSearchEventsTool(accessToken, timezone),
     createGetFreeBusyTool(accessToken),
-    createCreateEventTool(),
-    createUpdateEventTool(),
+    createCreateEventTool(timezone),
+    createUpdateEventTool(timezone),
     createDeleteEventTool(),
-    createDateTimeMathTool(),
+    createDateTimeMathTool(timezone),
   ];
 
   const agent = createReactAgent({
