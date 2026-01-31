@@ -3,3 +3,6 @@ export { createListEventsTool } from './listEventsTool';
 export { createCreateEventTool } from './createEventTool';
 export { createUpdateEventTool } from './updateEventTool';
 export { createDeleteEventTool } from './deleteEventTool';
+export { createGetCurrentDateTimeTool } from './getCurrentDateTimeTool';
+export { createSearchEventsTool } from './searchEventsTool';
+export { createGetFreeBusyTool } from './getFreeBusyTool';

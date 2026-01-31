@@ -25,6 +25,7 @@
 ### LangChain Agent / Chat Service
 - [x] Integrate LangChain.js with ChatGoogleGenerativeAI (Gemini free tier) (PR #8)
 - [x] Implement custom LangChain tools: `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool` (PR #8)
+- [x] Add enhanced agent tools: `GetCurrentDateTimeTool`, `SearchEventsTool`, `GetFreeBusyTool` with integration tests (PR #19)
 - [x] Implement database-backed `MongoChatMessageHistory` for conversation persistence (PR #12)
 - [x] Build ReAct agent with tool-calling via LangGraph `createReactAgent` (PR #8, #12)
 
