@@ -91,7 +91,8 @@ app.use('/api/calendars', calendarRoutes);
 app.use('/api', chatRoutes);
 
 // Root endpoint
-app.get('/', (req: Request, res: Response) => {
+if(!isProduction){
+  app.get('/', (req: Request, res: Response) => {
   res.json({
     message: 'Calendar Assistant API',
     version: '1.0.0',
@@ -105,6 +106,7 @@ app.get('/', (req: Request, res: Response) => {
     },
   });
 });
+}
 
 // In production, serve the frontend SPA from the built app directory
 if (isProduction) {
