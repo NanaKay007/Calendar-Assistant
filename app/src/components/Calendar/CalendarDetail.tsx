@@ -470,7 +470,8 @@ function CurrentTimeIndicator() {
 
 // ── Main Component ──────────────────────────────────────────────────────
 export function CalendarDetail() {
-  const { calendarId } = useParams<{ calendarId: string }>();
+  const { calendarId: rawCalendarId } = useParams<{ calendarId: string }>();
+  const calendarId = rawCalendarId ? decodeURIComponent(rawCalendarId) : undefined;
   const navigate = useNavigate();
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
