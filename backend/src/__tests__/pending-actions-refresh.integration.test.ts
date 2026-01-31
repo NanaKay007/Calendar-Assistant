@@ -214,6 +214,25 @@ describe('Pending actions persist across refresh', () => {
     expect(resAll.body.data.length).toBe(2);
   }, 60000);
 
+  it('should return 404 when querying another user\'s conversation', async () => {
+    // Create a conversation owned by a different user
+    const otherConv = await conversationService.createConversation('other-user-id', 'Other user convo');
+
+    // Create a pending action for that conversation
+    actionService.createAction(
+      'other-user-id', otherConv.id, 'create_event',
+      { calendarId: 'primary', summary: 'Secret Meeting', startDateTime: new Date().toISOString(), endDateTime: new Date().toISOString() },
+      'Secret action',
+    );
+
+    // Try to fetch as the authenticated user (refresh-test-user)
+    const res = await agent.get(`/api/actions/pending?conversationId=${otherConv.id}`);
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    // Should not leak any action data
+    expect(res.body.data).toBeUndefined();
+  });
+
   it('should reject invalid conversationId format', async () => {
     const res = await agent.get('/api/actions/pending?conversationId=../../../etc/passwd');
     expect(res.status).toBe(400);

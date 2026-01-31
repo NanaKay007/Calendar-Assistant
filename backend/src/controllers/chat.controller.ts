@@ -76,6 +76,12 @@ export const getPendingActions = async (req: AuthenticatedRequest, res: Response
         res.status(400).json({ success: false, error: 'Invalid conversationId format' } as ApiResponse);
         return;
       }
+      // Verify the user owns this conversation to prevent cross-user enumeration
+      const conversation = await conversationService.getConversation(conversationId);
+      if (!conversation || conversation.userId !== req.user.id) {
+        res.status(404).json({ success: false, error: 'Not found' } as ApiResponse);
+        return;
+      }
       actions = actions.filter((a) => a.conversationId === conversationId);
     }
 
