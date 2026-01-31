@@ -561,7 +561,7 @@ export function CalendarDetail() {
   const headerLabel = viewMode === 'month' ? formatMonthYear(currentDate) : formatWeekRange(currentDate);
 
   return (
-    <div className="h-[calc(100vh-7.5rem)] flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* ── Toolbar ── */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-white shrink-0">
         <div className="flex items-center gap-3">

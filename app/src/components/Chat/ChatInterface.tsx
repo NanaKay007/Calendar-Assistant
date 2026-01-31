@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ChatMessage, PendingAction } from '../../types';
 import { chatService } from '../../services/chatService';
-import { conversationService } from '../../services/conversationService';
 import { ApprovalModal } from '../Approval/ApprovalModal';
-import { ConversationSidebar } from './ConversationSidebar';
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'initial',
@@ -18,8 +16,7 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [selectedAction, setSelectedAction] = useState<PendingAction | null>(null);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [isLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
@@ -39,33 +36,6 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSelectConversation = async (selectedId: string) => {
-    if (selectedId === conversationId) return;
-
-    setIsLoadingMessages(true);
-    try {
-      const backendMessages = await conversationService.getMessages(selectedId);
-      const chatMessages = conversationService.mapToChatMessages(backendMessages);
-      setMessages(chatMessages.length > 0 ? chatMessages : [INITIAL_MESSAGE]);
-      setConversationId(selectedId);
-
-      // Fetch any outstanding pending actions for this conversation (survives refresh)
-      const fetchedActions = await chatService.fetchPendingActions(selectedId);
-      setPendingActions(fetchedActions);
-      setSelectedAction(fetchedActions.length > 0 ? fetchedActions[0] : null);
-    } catch (error) {
-      console.error('Failed to load conversation messages:', error);
-      const errorMsg: ChatMessage = {
-        id: `msg_${Date.now()}_err`,
-        role: 'assistant',
-        content: 'Failed to load conversation messages. Please try again.',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages([errorMsg]);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  };
 
   const handleNewConversation = () => {
     setConversationId(undefined);
@@ -94,8 +64,6 @@ export function ChatInterface() {
       const result = await chatService.sendMessage(userInput, conversationId);
       if (result.conversationId && !conversationId) {
         setConversationId(result.conversationId);
-        // Trigger sidebar refresh when a new conversation is created
-        setSidebarRefreshTrigger(prev => prev + 1);
       }
       setMessages(prev => [...prev, result.message]);
 
@@ -173,22 +141,20 @@ export function ChatInterface() {
 
   return (
     <div className="flex h-full">
-      <ConversationSidebar
-        currentConversationId={conversationId}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-        refreshTrigger={sidebarRefreshTrigger}
-      />
-
       <div className="flex flex-col flex-1 min-w-0">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-900">Calendar Assistant</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Ask me to help manage your calendar
-          </p>
+        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Assistant</h2>
+          </div>
+          <button
+            onClick={handleNewConversation}
+            className="px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            New chat
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 relative">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
           {isLoadingMessages && (
             <div className="absolute inset-0 bg-gray-50 bg-opacity-80 flex items-center justify-center z-10">
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />

@@ -4,7 +4,6 @@ import { Login } from './components/Auth/Login';
 import { Layout } from './components/Layout/Layout';
 import { CalendarList } from './components/Calendar/CalendarList';
 import { CalendarDetail } from './components/Calendar/CalendarDetail';
-import { ChatInterface } from './components/Chat/ChatInterface';
 import { authService } from './services/authService';
 
 /**
@@ -111,19 +110,10 @@ function App() {
             )
           }
         />
+        {/* Redirect old /chat route to calendars — chat is now a collapsible panel */}
         <Route
           path="/chat"
-          element={
-            isAuthenticated ? (
-              <Layout>
-                <div className="h-[calc(100vh-10rem)] bg-white rounded-lg shadow-md overflow-hidden">
-                  <ChatInterface />
-                </div>
-              </Layout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
+          element={<Navigate to="/calendars" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
