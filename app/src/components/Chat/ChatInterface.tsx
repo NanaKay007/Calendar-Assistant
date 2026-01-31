@@ -48,8 +48,11 @@ export function ChatInterface() {
       const chatMessages = conversationService.mapToChatMessages(backendMessages);
       setMessages(chatMessages.length > 0 ? chatMessages : [INITIAL_MESSAGE]);
       setConversationId(selectedId);
-      setPendingActions([]);
-      setSelectedAction(null);
+
+      // Fetch any outstanding pending actions for this conversation (survives refresh)
+      const fetchedActions = await chatService.fetchPendingActions(selectedId);
+      setPendingActions(fetchedActions);
+      setSelectedAction(fetchedActions.length > 0 ? fetchedActions[0] : null);
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
       const errorMsg: ChatMessage = {
@@ -158,7 +161,9 @@ export function ChatInterface() {
   };
 
   const formatTime = (timestamp: string) => {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',

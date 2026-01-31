@@ -110,6 +110,14 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   const renderActionDetails = () => {
     const { type, details } = action;
 
+    if (!details || typeof details !== 'object') {
+      return (
+        <div className="bg-yellow-50 rounded-lg p-4 text-yellow-700 text-sm">
+          No action details available
+        </div>
+      );
+    }
+
     if (type === 'delete_event') {
       const deleteDetails = details as DeleteEventDetails & { summary?: string };
       return (

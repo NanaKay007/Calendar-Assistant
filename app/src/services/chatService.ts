@@ -38,12 +38,16 @@ interface SendResult {
 }
 
 function mapPendingAction(backend: BackendPendingAction): PendingAction {
+  // The WebSocket backend may send either the raw backend shape (actionType/params/createdAt)
+  // or the already-transformed frontend shape (type/details/timestamp) via toFrontendAction().
+  // Handle both to avoid undefined fields causing crashes in ApprovalModal.
+  const raw = backend as any;
   return {
     id: backend.id,
-    type: backend.actionType,
+    type: raw.type || backend.actionType,
     description: backend.description,
-    details: backend.params,
-    timestamp: backend.createdAt,
+    details: raw.details || backend.params || {},
+    timestamp: raw.timestamp || backend.createdAt,
     status: backend.status === 'executed' || backend.status === 'failed' ? 'approved' : backend.status as 'pending' | 'approved' | 'rejected',
   };
 }
@@ -284,6 +288,39 @@ class ChatService {
       action.status = 'rejected';
     }
     return body.message || 'Action rejected.';
+  }
+
+  async fetchPendingActions(conversationId: string): Promise<PendingAction[]> {
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(conversationId)) {
+      return [];
+    }
+    const response = await fetch(`/api/actions/pending?conversationId=${encodeURIComponent(conversationId)}`, {
+      credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!response.ok) {
+      console.error('Failed to fetch pending actions:', response.statusText);
+      return [];
+    }
+    const body = await response.json();
+    if (!body.success || !Array.isArray(body.data)) {
+      return [];
+    }
+    const actions: PendingAction[] = body.data.map((a: any) => ({
+      id: a.id,
+      type: a.type,
+      description: a.description,
+      details: a.details,
+      timestamp: a.timestamp,
+      status: a.status,
+    }));
+    // Merge into internal state so approve/reject can find them
+    for (const action of actions) {
+      if (!this.pendingActions.find(p => p.id === action.id)) {
+        this.pendingActions.push(action);
+      }
+    }
+    return actions.filter(a => a.status === 'pending');
   }
 
   clearHistory(): void {
