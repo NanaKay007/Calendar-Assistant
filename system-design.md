@@ -113,14 +113,14 @@ The agent is built using **LangChain.js** with the following components:
 - **`createReactAgent`** (LangGraph) — orchestrates tool-calling loop
 - **`MongoChatMessageHistory`** — MongoDB-backed chat history; manually loaded per request and passed to agent invocation (no auto-persist checkpointer)
 - **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`, `GetCurrentDateTimeTool`, `SearchEventsTool`, `GetFreeBusyTool`
-- **Human-in-the-loop** — when the agent emits a calendar-mutating tool call, the backend intercepts it, saves a `PendingAction`, and returns it to the frontend for approval instead of executing immediately
+- **Human-in-the-loop** — when the agent emits a calendar-mutating tool call, the backend intercepts it, saves a `PendingAction`, and returns it to the frontend for approval instead of executing immediately. On page load or conversation switch, the frontend fetches outstanding pending actions via `GET /api/actions/pending?conversationId=` so they survive browser refreshes.
 
 | Protocol | Endpoint                              | Description                                    |
 |----------|---------------------------------------|------------------------------------------------|
 | WS       | `/ws`                                 | WebSocket — send/receive chat messages          |
 | GET      | `/api/conversations`                  | List user's past conversations                  |
 | GET      | `/api/conversations/{id}/messages`    | Get full message history for a conversation     |
-| GET      | `/api/actions/pending`                | List pending actions awaiting approval          |
+| GET      | `/api/actions/pending`                | List pending actions awaiting approval (supports `?conversationId=` filter) |
 | POST     | `/api/actions/{id}/approve`           | Approve a pending action (executes it)          |
 | POST     | `/api/actions/{id}/reject`            | Reject a pending action                         |
 
