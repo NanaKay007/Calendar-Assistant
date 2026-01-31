@@ -23,8 +23,8 @@ export function createGetFreeBusyTool(accessToken: string) {
       description:
         'Query free/busy status for calendars within a time range. Returns busy periods. Use this to check availability before scheduling.',
       schema: z.object({
-        timeMin: z.string().describe('Start of time range (ISO 8601 datetime)'),
-        timeMax: z.string().describe('End of time range (ISO 8601 datetime)'),
+        timeMin: z.string().describe('Start of time range (ISO 8601 datetime with timezone offset, e.g. "2026-01-30T00:00:00-05:00")'),
+        timeMax: z.string().describe('End of time range (ISO 8601 datetime with timezone offset, e.g. "2026-01-31T00:00:00-05:00")'),
         calendarIds: z.array(z.string()).optional().describe('Calendar IDs to check. Defaults to ["primary"].'),
       }),
     }
