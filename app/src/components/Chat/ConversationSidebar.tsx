@@ -88,7 +88,7 @@ export function ConversationSidebar({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-white w-64 min-w-[16rem]">
+    <div className="flex flex-col h-full bg-gray-900 text-white">
       <div className="p-4 border-b border-gray-700">
         <button
           onClick={onNewConversation}

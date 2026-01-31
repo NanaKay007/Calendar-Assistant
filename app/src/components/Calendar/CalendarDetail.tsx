@@ -563,59 +563,58 @@ export function CalendarDetail() {
   return (
     <div className="h-[calc(100vh-7.5rem)] flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-white shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Back */}
-          <button
-            onClick={() => navigate('/calendars')}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
-            title="Back to calendars"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+      <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 border-b border-gray-200 bg-white shrink-0">
+        {/* Back */}
+        <button
+          onClick={() => navigate('/calendars')}
+          className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+          title="Back to calendars"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-          {/* Calendar dot + name */}
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: calendar.color }} />
-            <span className="text-sm font-medium text-gray-700">{calendar.name}</span>
-          </div>
+        {/* Calendar dot + name */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: calendar.color }} />
+          <span className="text-sm font-medium text-gray-700 truncate">{calendar.name}</span>
+        </div>
 
-          {/* Divider */}
-          <div className="w-px h-5 bg-gray-200" />
+        {/* Divider — hidden on very small screens */}
+        <div className="w-px h-5 bg-gray-200 hidden sm:block" />
 
-          {/* Today button */}
+        {/* Today + Nav arrows */}
+        <div className="flex items-center gap-1">
           <button
             onClick={goToToday}
-            className="px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            className="px-2.5 py-1 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors"
           >
             Today
           </button>
-
-          {/* Nav arrows */}
-          <div className="flex items-center">
-            <button
-              onClick={() => navigatePeriod(-1)}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={() => navigatePeriod(1)}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Period label */}
-          <h2 className="text-lg font-medium text-gray-900 select-none">{headerLabel}</h2>
+          <button
+            onClick={() => navigatePeriod(-1)}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => navigatePeriod(1)}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
+
+        {/* Period label */}
+        <h2 className="text-base sm:text-lg font-medium text-gray-900 select-none">{headerLabel}</h2>
+
+        {/* Spacer to push view switcher right */}
+        <div className="flex-1" />
 
         {/* View switcher */}
         <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
@@ -623,7 +622,7 @@ export function CalendarDetail() {
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
+              className={`px-2.5 sm:px-3 py-1 text-sm font-medium rounded-md transition-all ${
                 viewMode === mode
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
