@@ -1,8 +1,43 @@
 import { Response } from 'express';
-import { AuthenticatedRequest, ApiResponse } from '../types';
+import { AuthenticatedRequest, ApiResponse, PendingAction, CreateEventParams } from '../types';
 import { conversationService } from '../services/conversation.service';
 import { actionService } from '../services/action.service';
 import { toFrontendAction } from '../utils/action.utils';
+
+function formatActionMessage(action: PendingAction, approved: boolean): string {
+  const verb = approved ? 'approved' : 'rejected';
+  const params = action.params as any;
+
+  if (action.actionType === 'create_event') {
+    const p = params as CreateEventParams;
+    const date = p.startDateTime ? new Date(p.startDateTime).toLocaleString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    }) : '';
+    if (approved) {
+      return `Action approved: Created event '${p.summary}'${date ? ` on ${date}` : ''}.`;
+    }
+    return `Action rejected: Create event '${p.summary}' was cancelled by user.`;
+  }
+
+  if (action.actionType === 'update_event') {
+    const summary = params.summary || 'event';
+    if (approved) {
+      return `Action approved: Updated event '${summary}'.`;
+    }
+    return `Action rejected: Update event '${summary}' was cancelled by user.`;
+  }
+
+  if (action.actionType === 'delete_event') {
+    const summary = params.summary || 'event';
+    if (approved) {
+      return `Action approved: Deleted event '${summary}'.`;
+    }
+    return `Action rejected: Delete event was cancelled by user.`;
+  }
+
+  return `Action ${verb}.`;
+}
 
 const param = (req: AuthenticatedRequest, name: string): string =>
   req.params[name] as string;
@@ -84,7 +119,13 @@ export const approveAction = async (req: AuthenticatedRequest, res: Response): P
 
     const actionId = param(req, 'id');
     const result = await actionService.approveAction(actionId, req.oauth2Client, req.user.id);
-    res.json({ success: true, data: toFrontendAction(result), message: 'Action executed successfully' } as ApiResponse);
+    const approvalMessage = formatActionMessage(result, true);
+    try {
+      await conversationService.addMessage(result.conversationId, 'assistant', approvalMessage);
+    } catch (e) {
+      console.error('Failed to save approval message:', e);
+    }
+    res.json({ success: true, data: toFrontendAction(result), message: approvalMessage } as ApiResponse);
   } catch (error: any) {
     console.error('Error approving action:', error);
     // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration
@@ -106,7 +147,13 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
 
     const actionId = param(req, 'id');
     const result = actionService.rejectAction(actionId, req.user.id);
-    res.json({ success: true, data: toFrontendAction(result), message: 'Action rejected' } as ApiResponse);
+    const rejectionMessage = formatActionMessage(result, false);
+    try {
+      await conversationService.addMessage(result.conversationId, 'assistant', rejectionMessage);
+    } catch (e) {
+      console.error('Failed to save rejection message:', e);
+    }
+    res.json({ success: true, data: toFrontendAction(result), message: rejectionMessage } as ApiResponse);
   } catch (error: any) {
     console.error('Error rejecting action:', error);
     // Return 404 for both 'not found' and 'unauthorized' to prevent user enumeration

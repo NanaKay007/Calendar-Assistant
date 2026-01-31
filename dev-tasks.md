@@ -52,6 +52,10 @@
 - [x] LLM factory with provider selection (`backend/src/agent/llm.ts`)
 - [x] Integration tests for LLM factory
 
+### UX Improvements
+- [x] Approval modal shows human-readable event details instead of raw JSON and technical IDs
+- [x] Approve/reject decisions saved as conversation messages for chat history persistence
+
 ### Testing
 - [ ] Unit tests for LangChain agent and tools
 - [x] Unit tests for WebSocket chat + REST conversation/action endpoints (PR #11)

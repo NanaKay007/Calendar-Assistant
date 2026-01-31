@@ -121,8 +121,8 @@ The agent is built using **LangChain.js** with the following components:
 | GET      | `/api/conversations`                  | List user's past conversations                  |
 | GET      | `/api/conversations/{id}/messages`    | Get full message history for a conversation     |
 | GET      | `/api/actions/pending`                | List pending actions awaiting approval          |
-| POST     | `/api/actions/{id}/approve`           | Approve a pending action (executes it)          |
-| POST     | `/api/actions/{id}/reject`            | Reject a pending action                         |
+| POST     | `/api/actions/{id}/approve`           | Approve a pending action (executes it); saves human-readable confirmation message to conversation |
+| POST     | `/api/actions/{id}/reject`            | Reject a pending action; saves human-readable rejection message to conversation |
 
 **WebSocket `/ws` — client sends:**
 ```json
