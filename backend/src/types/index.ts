@@ -123,4 +123,5 @@ export interface ChatResponse {
   reply: string;
   conversationId: string;
   pendingAction?: PendingAction;
+  pendingActions?: PendingAction[];
 }

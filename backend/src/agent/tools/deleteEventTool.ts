@@ -14,7 +14,7 @@ export function createDeleteEventTool() {
       name: 'delete_event',
       description: 'Delete a calendar event. This returns a pending action that requires user approval before execution.',
       schema: z.object({
-        eventId: z.string().describe('The ID of the event to delete'),
+        eventId: z.string().describe('The ID of the event to delete. MUST be a real event ID obtained from a previous list_events or get_event call. Never guess or fabricate event IDs.'),
         calendarId: z.string().describe('The calendar ID containing the event. Use "primary" for default calendar.'),
         summary: z.string().optional().describe('The name/title of the event being deleted, for display purposes'),
       }),
