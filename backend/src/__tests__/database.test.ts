@@ -158,9 +158,11 @@ describe('Database Layer', () => {
 
     it('should create and find by id', async () => {
       const action = await pendingActionRepo.create({
+        user_id: 'user-1',
         conversation_id: conversationId,
         action_type: 'create_event',
         action_payload: { summary: 'Meeting', startDateTime: '2025-01-01T10:00:00Z' },
+        description: 'Create a meeting',
       });
       expect(action.status).toBe('pending');
       expect(action.action_type).toBe('create_event');
@@ -171,22 +173,22 @@ describe('Database Layer', () => {
     });
 
     it('should find pending actions by conversation', async () => {
-      await pendingActionRepo.create({ conversation_id: conversationId, action_type: 'create_event', action_payload: {} });
-      await pendingActionRepo.create({ conversation_id: conversationId, action_type: 'delete_event', action_payload: {} });
+      await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conversationId, action_type: 'create_event', action_payload: {}, description: 'Create event' });
+      await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conversationId, action_type: 'delete_event', action_payload: {}, description: 'Delete event' });
 
       const pending = await pendingActionRepo.findPendingByConversationId(conversationId);
       expect(pending).toHaveLength(2);
     });
 
     it('should update status to approved', async () => {
-      const action = await pendingActionRepo.create({ conversation_id: conversationId, action_type: 'create_event', action_payload: {} });
+      const action = await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conversationId, action_type: 'create_event', action_payload: {}, description: 'Create event' });
       const updated = await pendingActionRepo.updateStatus(action.id, 'approved');
       expect(updated!.status).toBe('approved');
       expect(updated!.resolved_at).toBeDefined();
     });
 
     it('should update status to rejected', async () => {
-      const action = await pendingActionRepo.create({ conversation_id: conversationId, action_type: 'create_event', action_payload: {} });
+      const action = await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conversationId, action_type: 'create_event', action_payload: {}, description: 'Create event' });
       await pendingActionRepo.updateStatus(action.id, 'rejected');
 
       // Rejected actions should not appear in pending query

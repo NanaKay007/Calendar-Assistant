@@ -54,11 +54,11 @@ describe('Approval modal crash fix integration', () => {
 
   afterEach(async () => {
     await conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
-  it('toFrontendAction should always produce details as an object', () => {
-    const action = actionService.createAction(
+  it('toFrontendAction should always produce details as an object', async () => {
+    const action = await actionService.createAction(
       'approval-modal-test-user',
       'conv-1',
       'create_event',
@@ -81,8 +81,8 @@ describe('Approval modal crash fix integration', () => {
     expect(frontend).not.toHaveProperty('actionType');
   });
 
-  it('toFrontendAction should produce valid details for delete actions', () => {
-    const action = actionService.createAction(
+  it('toFrontendAction should produce valid details for delete actions', async () => {
+    const action = await actionService.createAction(
       'approval-modal-test-user',
       'conv-1',
       'delete_event',
@@ -98,8 +98,8 @@ describe('Approval modal crash fix integration', () => {
     expect(frontend.type).toBe('delete_event');
   });
 
-  it('toFrontendAction should produce valid details for update actions', () => {
-    const action = actionService.createAction(
+  it('toFrontendAction should produce valid details for update actions', async () => {
+    const action = await actionService.createAction(
       'approval-modal-test-user',
       'conv-1',
       'update_event',
@@ -120,7 +120,7 @@ describe('Approval modal crash fix integration', () => {
   });
 
   it('GET /api/actions/pending returns details field (not params) for the modal', async () => {
-    actionService.createAction(
+    await actionService.createAction(
       'approval-modal-test-user',
       'conv-1',
       'create_event',
@@ -154,7 +154,7 @@ describe('Approval modal crash fix integration', () => {
   });
 
   it('GET /api/actions/pending returns details for delete action with calendarId and eventId', async () => {
-    actionService.createAction(
+    await actionService.createAction(
       'approval-modal-test-user',
       'conv-1',
       'delete_event',

@@ -65,7 +65,7 @@ describe('Chat & HITL API', () => {
 
   afterEach(async () => {
     await conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
   function connectWs(cookie?: string): Promise<WebSocket> {
@@ -261,7 +261,7 @@ describe('Chat & HITL API', () => {
     });
 
     it('should reject a pending action', async () => {
-      const action = actionService.createAction(
+      const action = await actionService.createAction(
         'test-user-1',
         'conv-1',
         'create_event',
@@ -281,7 +281,7 @@ describe('Chat & HITL API', () => {
     });
 
     it('should return 409 when rejecting an already rejected action', async () => {
-      const action = actionService.createAction(
+      const action = await actionService.createAction(
         'test-user-1',
         'conv-1',
         'create_event',
