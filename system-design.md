@@ -112,7 +112,7 @@ The agent is built using **LangChain.js** with the following components:
 - **Configurable LLM provider** — supports Google Gemini (`ChatGoogleGenerativeAI`) and Anthropic Claude (`ChatAnthropic`), selected via the `LLM_PROVIDER` environment variable (defaults to `gemini`)
 - **`createReactAgent`** (LangGraph) — orchestrates tool-calling loop
 - **`MongoChatMessageHistory`** — MongoDB-backed chat history; manually loaded per request and passed to agent invocation (no auto-persist checkpointer)
-- **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`
+- **Custom LangChain Tools** — `CreateEventTool`, `UpdateEventTool`, `DeleteEventTool`, `ListEventsTool`, `ListCalendarsTool`, `GetCurrentDateTimeTool`, `SearchEventsTool`, `GetFreeBusyTool`
 - **Human-in-the-loop** — when the agent emits a calendar-mutating tool call, the backend intercepts it, saves a `PendingAction`, and returns it to the frontend for approval instead of executing immediately
 
 | Protocol | Endpoint                              | Description                                    |
