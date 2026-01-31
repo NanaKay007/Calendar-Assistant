@@ -9,11 +9,12 @@ import {
   createGetCurrentDateTimeTool,
   createSearchEventsTool,
   createGetFreeBusyTool,
+  createDateTimeMathTool,
 } from './tools';
 
 const SYSTEM_PROMPT = `You are a helpful Google Calendar assistant. You help users manage their calendar events.
 
-You have access to the current date and time — always use the get_current_datetime tool first when the user refers to relative times like "today", "tomorrow", "this afternoon", "next week", etc.
+You have access to the current date and time — always use the get_current_datetime tool first when the user refers to relative times like "today", "tomorrow", "this afternoon", "next week", etc. Use the datetime_math tool to perform date arithmetic (e.g. "next Tuesday", "in 2 hours", "3 days from now") rather than computing dates yourself.
 
 You can search for events by keyword using the search_events tool, and check availability using the get_free_busy tool before suggesting meeting times.
 
@@ -34,6 +35,7 @@ export async function createCalendarAgent(accessToken: string) {
     createCreateEventTool(),
     createUpdateEventTool(),
     createDeleteEventTool(),
+    createDateTimeMathTool(),
   ];
 
   const agent = createReactAgent({

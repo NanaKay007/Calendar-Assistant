@@ -88,9 +88,13 @@ export function setupWebSocket(server: HttpServer): WebSocketServer {
           message,
           accessToken,
         );
-        const data = result.pendingAction
-          ? { ...result, pendingAction: toFrontendAction(result.pendingAction) }
-          : result;
+        const data: any = { ...result };
+        if (result.pendingAction) {
+          data.pendingAction = toFrontendAction(result.pendingAction);
+        }
+        if (result.pendingActions && result.pendingActions.length > 0) {
+          data.pendingActions = result.pendingActions.map(toFrontendAction);
+        }
         ws.send(JSON.stringify({ type: 'reply', requestId: parsed.requestId, data }));
       } catch (error: any) {
         ws.send(JSON.stringify({ type: 'error', requestId: parsed.requestId, error: error.message || 'Chat failed' }));

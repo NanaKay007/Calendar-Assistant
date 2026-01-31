@@ -6,3 +6,4 @@ export { createDeleteEventTool } from './deleteEventTool';
 export { createGetCurrentDateTimeTool } from './getCurrentDateTimeTool';
 export { createSearchEventsTool } from './searchEventsTool';
 export { createGetFreeBusyTool } from './getFreeBusyTool';
+export { createDateTimeMathTool } from './dateTimeMathTool';

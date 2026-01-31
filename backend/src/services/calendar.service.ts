@@ -1,4 +1,5 @@
 import { google, Auth } from 'googleapis';
+import { DateTime } from 'luxon';
 import { CalendarListItem, CalendarEvent, CreateEventParams, UpdateEventParams } from '../types';
 
 export class CalendarService {
@@ -62,7 +63,7 @@ export class CalendarService {
 
       const response = await calendar.events.list({
         calendarId,
-        timeMin: options?.timeMin || new Date().toISOString(),
+        timeMin: options?.timeMin || DateTime.now().toISO()!,
         timeMax: options?.timeMax,
         maxResults: options?.maxResults || 100,
         singleEvents: options?.singleEvents !== false, // default to true
@@ -232,7 +233,7 @@ export class CalendarService {
       const response = await calendar.events.list({
         calendarId,
         q: query,
-        timeMin: options?.timeMin || new Date().toISOString(),
+        timeMin: options?.timeMin || DateTime.now().toISO()!,
         timeMax: options?.timeMax,
         singleEvents: true,
         orderBy: 'startTime',
@@ -306,8 +307,11 @@ export class CalendarService {
     try {
       const calendar = google.calendar({ version: 'v3', auth });
       await calendar.events.delete({ calendarId, eventId });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting event:', error);
+      if (error?.code === 404) {
+        throw new Error(`Event not found (${eventId}). It may have been already deleted or the event ID is invalid.`);
+      }
       throw new Error('Failed to delete event');
     }
   }

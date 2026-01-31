@@ -1,20 +1,18 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
+import { DateTime } from 'luxon';
 
 export function createGetCurrentDateTimeTool() {
   return tool(
     async () => {
-      const now = new Date();
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const dayOfWeek = days[now.getDay()];
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const now = DateTime.now();
 
       return JSON.stringify({
-        date: now.toISOString().split('T')[0],
-        time: now.toLocaleTimeString('en-US', { hour12: true }),
-        dayOfWeek,
-        timezone,
-        iso: now.toISOString(),
+        date: now.toFormat('yyyy-MM-dd'),
+        time: now.toLocaleString(DateTime.TIME_SIMPLE),
+        dayOfWeek: now.weekdayLong,
+        timezone: now.zoneName,
+        utcOffset: now.toFormat('ZZ'),
       });
     },
     {
