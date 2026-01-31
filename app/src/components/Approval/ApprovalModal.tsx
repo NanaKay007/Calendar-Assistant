@@ -1,19 +1,19 @@
 import type { PendingAction, CreateEventDetails, UpdateEventDetails, DeleteEventDetails } from '../../types';
 
 interface ApprovalModalProps {
-  action: PendingAction;
-  onApprove: (actionId: string) => void;
-  onReject: (actionId: string) => void;
+  actions: PendingAction[];
+  onApproveAll: (actionIds: string[]) => void;
+  onRejectAll: (actionIds: string[]) => void;
   onClose: () => void;
 }
 
-export function ApprovalModal({ action, onApprove, onReject, onClose }: ApprovalModalProps) {
+export function ApprovalModal({ actions, onApproveAll, onRejectAll, onClose }: ApprovalModalProps) {
   const getActionIcon = (type: string) => {
     switch (type) {
       case 'create_event':
         return (
           <svg
-            className="w-12 h-12 text-blue-500"
+            className="w-8 h-8 text-blue-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -29,7 +29,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
       case 'update_event':
         return (
           <svg
-            className="w-12 h-12 text-yellow-500"
+            className="w-8 h-8 text-yellow-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -45,7 +45,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
       case 'delete_event':
         return (
           <svg
-            className="w-12 h-12 text-red-500"
+            className="w-8 h-8 text-red-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -61,7 +61,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
       default:
         return (
           <svg
-            className="w-12 h-12 text-gray-500"
+            className="w-8 h-8 text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -80,7 +80,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   const getActionTitle = (type: string) => {
     switch (type) {
       case 'create_event':
-        return 'Create New Event';
+        return 'Create Event';
       case 'update_event':
         return 'Update Event';
       case 'delete_event':
@@ -107,7 +107,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
     });
   };
 
-  const renderActionDetails = () => {
+  const renderActionDetails = (action: PendingAction) => {
     const { type, details } = action;
 
     if (!details || typeof details !== 'object') {
@@ -134,9 +134,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
       );
     }
 
-    // type is 'create_event' or 'update_event'
     const eventDetails = details as CreateEventDetails | UpdateEventDetails;
-
     const hasReadableInfo = eventDetails.summary || eventDetails.startDateTime || eventDetails.endDateTime || eventDetails.location || eventDetails.description;
 
     if (!hasReadableInfo) {
@@ -183,18 +181,39 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
     );
   };
 
+  const actionIds = actions.map(a => a.id);
+  const isSingle = actions.length === 1;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
-              {getActionIcon(action.type)}
+              {isSingle ? getActionIcon(actions[0].type) : (
+                <svg
+                  className="w-12 h-12 text-blue-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+              )}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {getActionTitle(action.type)}
+                  {isSingle ? getActionTitle(actions[0].type) : `${actions.length} Actions`}
                 </h2>
-                <p className="text-gray-600 mt-1">Review and approve this action</p>
+                <p className="text-gray-600 mt-1">
+                  {isSingle
+                    ? 'Review and approve this action'
+                    : 'Review and approve all actions together'}
+                </p>
               </div>
             </div>
             <button
@@ -217,20 +236,29 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
             </button>
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Action Details</h3>
-            {renderActionDetails()}
+          <div className="mb-6 space-y-4">
+            {actions.map((action, index) => (
+              <div key={action.id}>
+                <div className="flex items-center gap-2 mb-2">
+                  {!isSingle && getActionIcon(action.type)}
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {isSingle ? 'Action Details' : `${index + 1}. ${getActionTitle(action.type)}`}
+                  </h3>
+                </div>
+                {renderActionDetails(action)}
+              </div>
+            ))}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
             <button
-              onClick={() => onReject(action.id)}
+              onClick={() => onRejectAll(actionIds)}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
             >
-              Reject
+              {isSingle ? 'Reject' : 'Reject All'}
             </button>
             <button
-              onClick={() => onApprove(action.id)}
+              onClick={() => onApproveAll(actionIds)}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
             >
               <svg
@@ -246,7 +274,7 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              <span>Approve & Execute</span>
+              <span>{isSingle ? 'Approve & Execute' : 'Approve & Execute All'}</span>
             </button>
           </div>
         </div>

@@ -17,7 +17,7 @@ export function ChatInterface() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
-  const [selectedAction, setSelectedAction] = useState<PendingAction | null>(null);
+  const [selectedActionGroup, setSelectedActionGroup] = useState<PendingAction[] | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ export function ChatInterface() {
       // Fetch any outstanding pending actions for this conversation (survives refresh)
       const fetchedActions = await chatService.fetchPendingActions(selectedId);
       setPendingActions(fetchedActions);
-      setSelectedAction(fetchedActions.length > 0 ? fetchedActions[0] : null);
+      setSelectedActionGroup(fetchedActions.length > 0 ? fetchedActions : null);
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
       const errorMsg: ChatMessage = {
@@ -71,7 +71,7 @@ export function ChatInterface() {
     setConversationId(undefined);
     setMessages([INITIAL_MESSAGE]);
     setPendingActions([]);
-    setSelectedAction(null);
+    setSelectedActionGroup(null);
     chatService.clearHistory();
   };
 
@@ -99,9 +99,9 @@ export function ChatInterface() {
       }
       setMessages(prev => [...prev, result.message]);
 
-      if (result.pendingAction) {
+      if (result.pendingActions && result.pendingActions.length > 0) {
         setPendingActions([...chatService.getPendingActions()]);
-        setSelectedAction(result.pendingAction);
+        setSelectedActionGroup(result.pendingActions);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -124,39 +124,49 @@ export function ChatInterface() {
     }
   };
 
-  const handleApproveAction = async (actionId: string) => {
+  const handleApproveAll = async (actionIds: string[]) => {
     try {
-      const message = await chatService.approveAction(actionId);
+      const results = await Promise.allSettled(
+        actionIds.map(id => chatService.approveAction(id))
+      );
       setPendingActions(chatService.getPendingActions());
-      setSelectedAction(null);
+      setSelectedActionGroup(null);
+
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      const content = failed === 0
+        ? `${succeeded} action${succeeded !== 1 ? 's' : ''} approved and executed successfully!`
+        : `${succeeded} action${succeeded !== 1 ? 's' : ''} executed, ${failed} failed.`;
 
       const confirmationMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: message,
+        content,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmationMessage]);
     } catch (error) {
-      console.error('Error approving action:', error);
+      console.error('Error approving actions:', error);
     }
   };
 
-  const handleRejectAction = async (actionId: string) => {
+  const handleRejectAll = async (actionIds: string[]) => {
     try {
-      const message = await chatService.rejectAction(actionId);
+      await Promise.allSettled(
+        actionIds.map(id => chatService.rejectAction(id))
+      );
       setPendingActions(chatService.getPendingActions());
-      setSelectedAction(null);
+      setSelectedActionGroup(null);
 
       const confirmationMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: message,
+        content: `${actionIds.length} action${actionIds.length !== 1 ? 's' : ''} rejected.`,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmationMessage]);
     } catch (error) {
-      console.error('Error rejecting action:', error);
+      console.error('Error rejecting actions:', error);
     }
   };
 
@@ -235,7 +245,10 @@ export function ChatInterface() {
         </div>
 
         {pendingActions.length > 0 && (
-          <div className="bg-yellow-50 border-t border-yellow-200 px-6 py-3">
+          <button
+            onClick={() => setSelectedActionGroup(pendingActions)}
+            className="w-full bg-yellow-50 border-t border-yellow-200 px-6 py-3 hover:bg-yellow-100 transition-colors cursor-pointer text-left"
+          >
             <div className="flex items-center gap-2 text-sm text-yellow-800">
               <svg
                 className="w-5 h-5"
@@ -252,7 +265,7 @@ export function ChatInterface() {
               </svg>
               <span>{pendingActions.length} action{pendingActions.length !== 1 ? 's' : ''} awaiting approval</span>
             </div>
-          </div>
+          </button>
         )}
 
         <div className="bg-white border-t border-gray-200 px-6 py-4">
@@ -290,12 +303,12 @@ export function ChatInterface() {
         </div>
       </div>
 
-      {selectedAction && (
+      {selectedActionGroup && selectedActionGroup.length > 0 && (
         <ApprovalModal
-          action={selectedAction}
-          onApprove={handleApproveAction}
-          onReject={handleRejectAction}
-          onClose={() => setSelectedAction(null)}
+          actions={selectedActionGroup}
+          onApproveAll={handleApproveAll}
+          onRejectAll={handleRejectAll}
+          onClose={() => setSelectedActionGroup(null)}
         />
       )}
     </div>
