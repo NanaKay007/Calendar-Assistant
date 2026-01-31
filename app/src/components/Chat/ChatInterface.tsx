@@ -20,6 +20,7 @@ export function ChatInterface() {
   const [selectedAction, setSelectedAction] = useState<PendingAction | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [showConversations, setShowConversations] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
@@ -40,6 +41,7 @@ export function ChatInterface() {
   };
 
   const handleSelectConversation = async (selectedId: string) => {
+    setShowConversations(false);
     if (selectedId === conversationId) return;
 
     setIsLoadingMessages(true);
@@ -72,6 +74,7 @@ export function ChatInterface() {
     setMessages([INITIAL_MESSAGE]);
     setPendingActions([]);
     setSelectedAction(null);
+    setShowConversations(false);
     chatService.clearHistory();
   };
 
@@ -172,121 +175,123 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="flex h-full">
-      <ConversationSidebar
-        currentConversationId={conversationId}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-        refreshTrigger={sidebarRefreshTrigger}
-      />
+    <div className="flex flex-col h-full relative">
+      {/* Toolbar: history toggle + new conversation */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-white">
+        <button
+          onClick={() => setShowConversations(prev => !prev)}
+          className={`p-1.5 rounded transition-colors ${
+            showConversations ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+          }`}
+          title="Conversation history"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+        <button
+          onClick={handleNewConversation}
+          className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          title="New conversation"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-900">Calendar Assistant</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Ask me to help manage your calendar
-          </p>
+      {/* Conversations list overlay */}
+      {showConversations && (
+        <div className="absolute top-[2.75rem] left-0 right-0 bottom-0 z-20">
+          <ConversationSidebar
+            currentConversationId={conversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={handleNewConversation}
+            refreshTrigger={sidebarRefreshTrigger}
+          />
         </div>
+      )}
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 relative">
-          {isLoadingMessages && (
-            <div className="absolute inset-0 bg-gray-50 bg-opacity-80 flex items-center justify-center z-10">
-              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-            </div>
-          )}
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
+        {isLoadingMessages && (
+          <div className="absolute inset-0 bg-gray-50 bg-opacity-80 flex items-center justify-center z-10">
+            <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+          </div>
+        )}
 
-          {messages.map((message) => (
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
             <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                message.role === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-900 shadow-sm border border-gray-200'
+              }`}
             >
-              <div
-                className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-900 shadow-sm border border-gray-200'
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <span
+                className={`text-xs mt-1 block ${
+                  message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                <span
-                  className={`text-xs mt-2 block ${
-                    message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                  }`}
-                >
-                  {formatTime(message.timestamp)}
-                </span>
-              </div>
+                {formatTime(message.timestamp)}
+              </span>
             </div>
-          ))}
+          </div>
+        ))}
 
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white text-gray-900 shadow-sm border border-gray-200 rounded-lg px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white text-gray-900 shadow-sm border border-gray-200 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {pendingActions.length > 0 && (
-          <div className="bg-yellow-50 border-t border-yellow-200 px-6 py-3">
-            <div className="flex items-center gap-2 text-sm text-yellow-800">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <span>{pendingActions.length} action{pendingActions.length !== 1 ? 's' : ''} awaiting approval</span>
             </div>
           </div>
         )}
 
-        <div className="bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <span>Send</span>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
-            </button>
+        <div ref={messagesEndRef} />
+      </div>
+
+      {pendingActions.length > 0 && (
+        <div className="bg-yellow-50 border-t border-yellow-200 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-yellow-800">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{pendingActions.length} action{pendingActions.length !== 1 ? 's' : ''} awaiting approval</span>
           </div>
+        </div>
+      )}
+
+      <div className="bg-white border-t border-gray-200 px-3 py-2">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            disabled={isLoading}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
+            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
         </div>
       </div>
 

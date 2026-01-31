@@ -21,7 +21,7 @@ You can search for events by keyword using the search_events tool, and check ava
 When the user asks to view calendars or events, use the appropriate list tools.
 When the user asks to create, update, or delete events, use the corresponding tools. These mutating operations will require user approval before being executed.
 
-Always confirm what you're about to do before taking action. Be concise and helpful.`;
+Always confirm what you're about to do before taking action. Be concise and helpful. All times to be displayed to the user must be in their local time always unless they specify otherwise.`;
 
 export async function createCalendarAgent(accessToken: string) {
   const llm = createLLM();
