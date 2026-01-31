@@ -48,8 +48,11 @@ export function ChatInterface() {
       const chatMessages = conversationService.mapToChatMessages(backendMessages);
       setMessages(chatMessages.length > 0 ? chatMessages : [INITIAL_MESSAGE]);
       setConversationId(selectedId);
-      setPendingActions([]);
-      setSelectedAction(null);
+
+      // Fetch any outstanding pending actions for this conversation (survives refresh)
+      const fetchedActions = await chatService.fetchPendingActions(selectedId);
+      setPendingActions(fetchedActions);
+      setSelectedAction(fetchedActions.length > 0 ? fetchedActions[0] : null);
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
       const errorMsg: ChatMessage = {
@@ -123,14 +126,14 @@ export function ChatInterface() {
 
   const handleApproveAction = async (actionId: string) => {
     try {
-      await chatService.approveAction(actionId);
+      const message = await chatService.approveAction(actionId);
       setPendingActions(chatService.getPendingActions());
       setSelectedAction(null);
 
       const confirmationMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Action approved and executed successfully!',
+        content: message,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmationMessage]);
@@ -141,14 +144,14 @@ export function ChatInterface() {
 
   const handleRejectAction = async (actionId: string) => {
     try {
-      await chatService.rejectAction(actionId);
+      const message = await chatService.rejectAction(actionId);
       setPendingActions(chatService.getPendingActions());
       setSelectedAction(null);
 
       const confirmationMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Action rejected. How else can I help you?',
+        content: message,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmationMessage]);
@@ -158,7 +161,9 @@ export function ChatInterface() {
   };
 
   const formatTime = (timestamp: string) => {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',

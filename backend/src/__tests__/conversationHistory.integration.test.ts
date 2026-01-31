@@ -100,10 +100,10 @@ describe('Conversation History Integration', () => {
     );
     expect(conv).toBeDefined();
     expect(conv.id).toBe(response.data.conversationId);
-    expect(conv.user_id).toBe('conv-history-user');
+    expect(conv.userId).toBe('conv-history-user');
     expect(conv.title).toBeDefined();
-    expect(conv.created_at).toBeDefined();
-    expect(conv.updated_at).toBeDefined();
+    expect(conv.createdAt).toBeDefined();
+    expect(conv.updatedAt).toBeDefined();
   });
 
   it('should fetch messages for a conversation via GET /api/conversations/:id/messages', async () => {
@@ -130,8 +130,8 @@ describe('Conversation History Integration', () => {
       (m: any) => m.role === 'user' && m.content === 'Test message for history retrieval'
     );
     expect(userMsg).toBeDefined();
-    expect(userMsg.conversation_id).toBe(conversationId);
-    expect(userMsg.created_at).toBeDefined();
+    expect(userMsg.conversationId).toBe(conversationId);
+    expect(userMsg.createdAt).toBeDefined();
 
     const assistantMsg = res.body.data.find((m: any) => m.role === 'assistant');
     expect(assistantMsg).toBeDefined();
