@@ -55,7 +55,7 @@ describe('Pending actions persist across refresh', () => {
 
   afterEach(async () => {
     await conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
   function connectWs(): Promise<WebSocket> {
@@ -95,7 +95,7 @@ describe('Pending actions persist across refresh', () => {
 
     // The LLM may or may not return a pendingAction depending on its response.
     // Regardless, let's also manually create one to ensure deterministic testing.
-    const manualAction = actionService.createAction(
+    const manualAction = await actionService.createAction(
       'refresh-test-user',
       conversationId,
       'create_event',
@@ -136,7 +136,7 @@ describe('Pending actions persist across refresh', () => {
     const conversationId = chatRes.data.conversationId;
 
     // Create a pending action
-    const action = actionService.createAction(
+    const action = await actionService.createAction(
       'refresh-test-user',
       conversationId,
       'create_event',
@@ -188,12 +188,12 @@ describe('Pending actions persist across refresh', () => {
     const convId2 = chat2.data.conversationId;
     ws.close();
 
-    actionService.createAction(
+    await actionService.createAction(
       'refresh-test-user', convId1, 'create_event',
       { calendarId: 'primary', summary: 'Conv1 Event', startDateTime: new Date().toISOString(), endDateTime: new Date().toISOString() },
       'Conv1 action',
     );
-    actionService.createAction(
+    await actionService.createAction(
       'refresh-test-user', convId2, 'create_event',
       { calendarId: 'primary', summary: 'Conv2 Event', startDateTime: new Date().toISOString(), endDateTime: new Date().toISOString() },
       'Conv2 action',

@@ -78,9 +78,11 @@ describe('Database Integration', () => {
 
       // 5. Create pending action
       const action = await pendingActionRepo.create({
+        user_id: user.id,
         conversation_id: conv.id,
         action_type: 'create_event',
         action_payload: { summary: 'Meeting', startDateTime: '2026-01-30T10:00:00Z' },
+        description: 'Create a meeting',
       });
       expect(action.status).toBe('pending');
 
@@ -131,9 +133,9 @@ describe('Database Integration', () => {
       await userRepo.upsert({ id: 'user-1', email: 'u@test.com', display_name: 'U' });
       const conv = await conversationRepo.create('user-1', 'Action Test Conv');
 
-      const a1 = await pendingActionRepo.create({ conversation_id: conv.id, action_type: 'create_event', action_payload: { summary: 'Event 1' } });
-      const a2 = await pendingActionRepo.create({ conversation_id: conv.id, action_type: 'delete_event', action_payload: { eventId: 'e1' } });
-      const a3 = await pendingActionRepo.create({ conversation_id: conv.id, action_type: 'update_event', action_payload: { eventId: 'e2' } });
+      const a1 = await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conv.id, action_type: 'create_event', action_payload: { summary: 'Event 1' }, description: 'Create event 1' });
+      const a2 = await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conv.id, action_type: 'delete_event', action_payload: { eventId: 'e1' }, description: 'Delete event' });
+      const a3 = await pendingActionRepo.create({ user_id: 'user-1', conversation_id: conv.id, action_type: 'update_event', action_payload: { eventId: 'e2' }, description: 'Update event' });
 
       // Approve first, reject second, leave third pending
       await pendingActionRepo.updateStatus(a1.id, 'approved');

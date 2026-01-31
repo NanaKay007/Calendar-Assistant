@@ -52,7 +52,7 @@ describe('Chat Integration (real agent)', () => {
 
   afterEach(async () => {
     await conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
   function connectWs(): Promise<WebSocket> {

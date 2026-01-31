@@ -112,7 +112,7 @@ export class ChatService {
     for (const tc of agentResult.toolCalls) {
       const actionType = MUTATING_ACTIONS[tc.name];
       if (actionType) {
-        const action = actionService.createAction(
+        const action = await actionService.createAction(
           userId,
           convId,
           actionType,

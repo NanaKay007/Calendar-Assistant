@@ -55,7 +55,7 @@ describe('Action transformation integration', () => {
 
   afterEach(async () => {
     await conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
   function connectWs(): Promise<WebSocket> {
@@ -109,7 +109,7 @@ describe('Action transformation integration', () => {
 
   it('should transform pendingAction fields in GET /api/actions/pending', async () => {
     // Create an action via the service directly
-    actionService.createAction(
+    await actionService.createAction(
       'transform-test-user',
       'test-conv-id',
       'create_event',
@@ -144,7 +144,7 @@ describe('Action transformation integration', () => {
   });
 
   it('should transform action fields in reject response', async () => {
-    const created = actionService.createAction(
+    const created = await actionService.createAction(
       'transform-test-user',
       'test-conv-id',
       'delete_event',
@@ -167,7 +167,7 @@ describe('Action transformation integration', () => {
 
   it('should reject action for unauthorized user', async () => {
     // Create an action for a different user
-    const created = actionService.createAction(
+    const created = await actionService.createAction(
       'other-user-id',
       'test-conv-id',
       'delete_event',
@@ -182,7 +182,7 @@ describe('Action transformation integration', () => {
   });
 
   it('should transform action fields in approve response', async () => {
-    const created = actionService.createAction(
+    const created = await actionService.createAction(
       'transform-test-user',
       'test-conv-id',
       'create_event',

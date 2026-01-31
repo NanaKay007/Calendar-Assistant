@@ -52,9 +52,9 @@ describe('Date Format Integration', () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }, 15000);
 
-  afterEach(() => {
+  afterEach(async () => {
     conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
   function connectWs(): Promise<WebSocket> {

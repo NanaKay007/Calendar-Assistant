@@ -44,4 +44,5 @@ async function initializeIndexes(database: Db): Promise<void> {
   await database.collection('conversations').createIndex({ user_id: 1 });
   await database.collection('messages').createIndex({ conversation_id: 1 });
   await database.collection('pending_actions').createIndex({ conversation_id: 1, status: 1 });
+  await database.collection('pending_actions').createIndex({ user_id: 1, status: 1 });
 }
