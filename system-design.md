@@ -5,7 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   Frontend (SPA)                     │
-│         React / Next.js (static export)              │
+│              React 19 / Vite / Tailwind              │
 │  ┌───────────┐ ┌───────────┐ ┌────────────────────┐ │
 │  │ Auth View │ │ Calendar  │ │  Chat Panel         │ │
 │  │           │ │ Dashboard │ │  (collapsible side  │ │
@@ -15,25 +15,27 @@
 │  │           │ │           │ │   approval UI)      │ │
 │  └───────────┘ └───────────┘ └────────────────────┘ │
 └────────────────────┬────────────────────────────────┘
-                     │ HTTPS
+                     │ Same-origin HTTP + WebSocket
 ┌────────────────────▼────────────────────────────────┐
 │                 Backend API                          │
-│          Node.js (Express / Next.js API)             │
+│             Node.js / Express 5                      │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────────────┐ │
 │  │ Auth     │ │ Calendar │ │  Agent / Chat        │ │
 │  │ Service  │ │ Service  │ │  Service (LangChain) │ │
-│  └──────────┘ └──────────┘ └──────────────────────┘ │
-└───┬──────────────┬──────────────────┬───────────────┘
-    │              │                  │
-    ▼              ▼                  ▼
-Google OAuth   Google Calendar    LangChain TS Agent
-  2.0 API        API              + LLM Provider
-                                  (e.g. Gemini free tier)
-                                      │
-                                      ▼
-                               MongoDB
-                              (conversations, pending
-                               actions, sessions)
+│  └────┬─────┘ └────┬─────┘ └──────────┬───────────┘ │
+└───────┼─────────────┼─────────────────┼─────────────┘
+        │             │                 │
+        ▼             ▼                 ▼
+   Google OAuth  Google Calendar   LangChain TS Agent
+    2.0 API        API             + LLM Provider
+                                   (Gemini / Claude)
+        │                               │
+        └───────────┐   ┌───────────────┘
+                    ▼   ▼
+                  MongoDB
+           (users, sessions,
+            conversations, messages,
+            pending actions)
 ```
 
 ## Data Models
