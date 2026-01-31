@@ -154,7 +154,7 @@ export function ChatInterface() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50 relative">
           {isLoadingMessages && (
             <div className="absolute inset-0 bg-gray-50 bg-opacity-80 flex items-center justify-center z-10">
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
@@ -167,7 +167,7 @@ export function ChatInterface() {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] rounded-lg px-4 py-3 ${
+                className={`max-w-[85%] sm:max-w-[70%] rounded-lg px-3 sm:px-4 py-2 sm:py-3 ${
                   message.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-900 shadow-sm border border-gray-200'
@@ -221,8 +221,8 @@ export function ChatInterface() {
           </div>
         )}
 
-        <div className="bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex gap-3">
+        <div className="bg-white border-t border-gray-200 px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex gap-2 sm:gap-3">
             <input
               type="text"
               value={inputValue}
@@ -230,14 +230,14 @@ export function ChatInterface() {
               onKeyPress={handleKeyPress}
               placeholder="Type your message..."
               disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-3 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <span>Send</span>
+              <span className="hidden sm:inline">Send</span>
               <svg
                 className="w-5 h-5"
                 fill="none"
