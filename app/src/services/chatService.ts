@@ -38,12 +38,16 @@ interface SendResult {
 }
 
 function mapPendingAction(backend: BackendPendingAction): PendingAction {
+  // The WebSocket backend may send either the raw backend shape (actionType/params/createdAt)
+  // or the already-transformed frontend shape (type/details/timestamp) via toFrontendAction().
+  // Handle both to avoid undefined fields causing crashes in ApprovalModal.
+  const raw = backend as any;
   return {
     id: backend.id,
-    type: backend.actionType,
+    type: raw.type || backend.actionType,
     description: backend.description,
-    details: backend.params,
-    timestamp: backend.createdAt,
+    details: raw.details || backend.params || {},
+    timestamp: raw.timestamp || backend.createdAt,
     status: backend.status === 'executed' || backend.status === 'failed' ? 'approved' : backend.status as 'pending' | 'approved' | 'rejected',
   };
 }
