@@ -21,6 +21,7 @@
 - [x] Implement conversation storage and retrieval (PR #7)
 - [x] Persist user & tokens to MongoDB on OAuth callback via `UserRepository.upsert`
 - [x] Replace in-memory session store with MongoDB-backed `connect-mongo` for persistent sessions
+- [x] Persist pending actions to MongoDB — replaced in-memory Map with `PendingActionRepository`, added `user_id`/`description` fields and `(user_id, status)` index (PR #36)
 
 ### LangChain Agent / Chat Service
 - [x] Integrate LangChain.js with ChatGoogleGenerativeAI (Gemini free tier) (PR #8)
@@ -56,6 +57,8 @@
 ### UX Improvements
 - [x] Approval modal shows human-readable event details instead of raw JSON and technical IDs
 - [x] Approve/reject decisions saved as conversation messages for chat history persistence
+- [x] Collapsible chat assistant panel — chat is a slide-out side panel instead of a separate page, keeping the calendar always visible (PR #35)
+- [x] Mobile-friendly layout — chat panel renders as full-screen overlay on mobile, nav collapses to icons, calendar toolbar wraps on narrow screens (PR #35)
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools

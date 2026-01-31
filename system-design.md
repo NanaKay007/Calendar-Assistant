@@ -7,10 +7,12 @@
 │                   Frontend (SPA)                     │
 │         React / Next.js (static export)              │
 │  ┌───────────┐ ┌───────────┐ ┌────────────────────┐ │
-│  │ Auth View │ │ Calendar  │ │  Chat Interface     │ │
-│  │           │ │ Dashboard │ │  (HITL approval UI) │ │
-│  │           │ │           │ │  + Conversation     │ │
-│  │           │ │           │ │    History Sidebar  │ │
+│  │ Auth View │ │ Calendar  │ │  Chat Panel         │ │
+│  │           │ │ Dashboard │ │  (collapsible side  │ │
+│  │           │ │           │ │   panel / mobile    │ │
+│  │           │ │           │ │   full-screen       │ │
+│  │           │ │           │ │   overlay, HITL     │ │
+│  │           │ │           │ │   approval UI)      │ │
 │  └───────────┘ └───────────┘ └────────────────────┘ │
 └────────────────────┬────────────────────────────────┘
                      │ HTTPS
@@ -30,7 +32,8 @@ Google OAuth   Google Calendar    LangChain TS Agent
                                       │
                                       ▼
                                MongoDB
-                              (conversation memory)
+                              (conversations, pending
+                               actions, sessions)
 ```
 
 ## Data Models
@@ -72,10 +75,12 @@ Google OAuth   Google Calendar    LangChain TS Agent
 | Field          | Type   | Description                                 |
 |----------------|--------|---------------------------------------------|
 | id             | string | UUID primary key                            |
+| user_id        | string | FK → User                                  |
 | conversation_id| string | FK → Conversation                          |
 | action_type    | string | e.g. `create_event`, `delete_event`, `update_event` |
 | action_payload | JSON   | Serialized action parameters                |
-| status         | enum   | `pending`, `approved`, `rejected`           |
+| description    | string | Human-readable summary of the action        |
+| status         | enum   | `pending`, `approved`, `rejected`, `executed`, `failed` |
 | created_at     | datetime | Timestamp                                 |
 | resolved_at    | datetime | When user approved/rejected               |
 
