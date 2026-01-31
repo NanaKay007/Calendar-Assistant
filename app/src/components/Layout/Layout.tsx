@@ -48,7 +48,7 @@ export function Layout({ children }: LayoutProps) {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4 sm:gap-8">
               <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/calendars')}>
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                   <svg
@@ -65,31 +65,31 @@ export function Layout({ children }: LayoutProps) {
                     />
                   </svg>
                 </div>
-                <span className="text-xl font-bold text-gray-900">Calendar Assistant</span>
+                <span className="text-xl font-bold text-gray-900 hidden sm:inline">Calendar Assistant</span>
               </div>
 
               <div className="flex gap-1">
                 <button
                   onClick={() => navigate('/calendars')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
                     isActive('/calendars')
                       ? 'bg-blue-50 text-blue-600 font-medium'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   {calendarIcon}
-                  <span>Calendars</span>
+                  <span className="hidden sm:inline">Calendars</span>
                 </button>
                 <button
                   onClick={() => setShowChat(prev => !prev)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
                     showChat
                       ? 'bg-blue-50 text-blue-600 font-medium'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   {assistantIcon}
-                  <span>Assistant</span>
+                  <span className="hidden sm:inline">Assistant</span>
                 </button>
               </div>
             </div>
@@ -172,34 +172,37 @@ export function Layout({ children }: LayoutProps) {
 
       <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
             {children}
           </div>
         </main>
 
-        {/* Collapsible chat panel */}
-        <div
-          className={`border-l border-gray-200 bg-white flex-shrink-0 transition-all duration-300 overflow-hidden ${
-            showChat ? 'w-[28rem]' : 'w-0'
-          }`}
-        >
-          <div className="w-[28rem] h-full flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-              <h2 className="text-lg font-semibold text-gray-900">Assistant</h2>
-              <button
-                onClick={() => setShowChat(false)}
-                className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        {/* Collapsible chat panel — full-screen overlay on mobile, side panel on md+ */}
+        {showChat && (
+          <>
+            {/* Backdrop on mobile */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+              onClick={() => setShowChat(false)}
+            />
+            <div className="fixed inset-0 top-16 z-40 md:static md:inset-auto md:z-auto md:w-[28rem] md:flex-shrink-0 border-l border-gray-200 bg-white flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+                <h2 className="text-lg font-semibold text-gray-900">Assistant</h2>
+                <button
+                  onClick={() => setShowChat(false)}
+                  className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ChatInterface />
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <ChatInterface />
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
