@@ -16,6 +16,7 @@ export function createDeleteEventTool() {
       schema: z.object({
         eventId: z.string().describe('The ID of the event to delete'),
         calendarId: z.string().describe('The calendar ID containing the event. Use "primary" for default calendar.'),
+        summary: z.string().optional().describe('The name/title of the event being deleted, for display purposes'),
       }),
     }
   );

@@ -126,14 +126,14 @@ export function ChatInterface() {
 
   const handleApproveAction = async (actionId: string) => {
     try {
-      await chatService.approveAction(actionId);
+      const message = await chatService.approveAction(actionId);
       setPendingActions(chatService.getPendingActions());
       setSelectedAction(null);
 
       const confirmationMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Action approved and executed successfully!',
+        content: message,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmationMessage]);
@@ -144,14 +144,14 @@ export function ChatInterface() {
 
   const handleRejectAction = async (actionId: string) => {
     try {
-      await chatService.rejectAction(actionId);
+      const message = await chatService.rejectAction(actionId);
       setPendingActions(chatService.getPendingActions());
       setSelectedAction(null);
 
       const confirmationMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: 'Action rejected. How else can I help you?',
+        content: message,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmationMessage]);

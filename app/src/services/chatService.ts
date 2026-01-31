@@ -256,36 +256,38 @@ class ChatService {
     return this.pendingActions.filter(a => a.status === 'pending');
   }
 
-  async approveAction(actionId: string): Promise<void> {
+  async approveAction(actionId: string): Promise<string> {
     const response = await fetch(`/api/actions/${actionId}/approve`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
+    const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
       throw new Error(body.error || `Failed to approve action: ${response.statusText}`);
     }
     const action = this.pendingActions.find(a => a.id === actionId);
     if (action) {
       action.status = 'approved';
     }
+    return body.message || 'Action approved and executed successfully!';
   }
 
-  async rejectAction(actionId: string): Promise<void> {
+  async rejectAction(actionId: string): Promise<string> {
     const response = await fetch(`/api/actions/${actionId}/reject`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
+    const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
       throw new Error(body.error || `Failed to reject action: ${response.statusText}`);
     }
     const action = this.pendingActions.find(a => a.id === actionId);
     if (action) {
       action.status = 'rejected';
     }
+    return body.message || 'Action rejected.';
   }
 
   async fetchPendingActions(conversationId: string): Promise<PendingAction[]> {
