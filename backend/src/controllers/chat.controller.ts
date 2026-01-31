@@ -102,7 +102,7 @@ export const getPendingActions = async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    let actions = actionService.getPendingActions(req.user.id);
+    let actions = await actionService.getPendingActions(req.user.id);
 
     // Support optional conversationId filter
     const conversationId = req.query.conversationId;
@@ -157,7 +157,7 @@ export const rejectAction = async (req: AuthenticatedRequest, res: Response): Pr
     }
 
     const actionId = param(req, 'id');
-    const result = actionService.rejectAction(actionId, req.user.id);
+    const result = await actionService.rejectAction(actionId, req.user.id);
     const rejectionMessage = formatActionMessage(result, false);
     try {
       await conversationService.addMessage(result.conversationId, 'assistant', rejectionMessage);

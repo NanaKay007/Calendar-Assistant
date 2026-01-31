@@ -53,7 +53,7 @@ describe('Approval UX Integration', () => {
 
   afterEach(async () => {
     await conversationService._clear();
-    actionService._clear();
+    await actionService._clear();
   });
 
   function connectWs(): Promise<WebSocket> {
@@ -168,7 +168,7 @@ describe('Approval UX Integration', () => {
       const conv = await conversationService.createConversation('approval-test-user', 'Test');
 
       // Create a pending action directly
-      const action = actionService.createAction(
+      const action = await actionService.createAction(
         'approval-test-user',
         conv.id,
         'create_event',

@@ -1,54 +1,84 @@
-import { randomUUID } from 'crypto';
 import { Auth } from 'googleapis';
-import { PendingAction, ActionType, ActionStatus, CreateEventParams, UpdateEventParams } from '../types';
+import { PendingAction, ActionType, CreateEventParams, UpdateEventParams } from '../types';
 import { calendarService } from './calendar.service';
+import { PendingActionRepository, PendingActionRow } from '../database/repositories/pendingActionRepository';
+import { getDatabase } from '../database/db';
+import type { Db } from 'mongodb';
 
-// In-memory storage (will be replaced by DB repositories)
-const actions = new Map<string, PendingAction>();
+function rowToAction(row: PendingActionRow): PendingAction {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    conversationId: row.conversation_id,
+    actionType: row.action_type as ActionType,
+    params: JSON.parse(row.action_payload),
+    description: row.description,
+    status: row.status as PendingAction['status'],
+    createdAt: row.created_at,
+    resolvedAt: row.resolved_at ?? undefined,
+  };
+}
 
 export class ActionService {
-  getPendingActions(userId: string): PendingAction[] {
-    return Array.from(actions.values())
-      .filter((a) => a.userId === userId && a.status === 'pending')
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  private repo: PendingActionRepository | null = null;
+
+  private async getRepo(): Promise<PendingActionRepository> {
+    if (!this.repo) {
+      const db: Db = await getDatabase();
+      this.repo = new PendingActionRepository(db);
+    }
+    return this.repo;
   }
 
-  getAction(actionId: string): PendingAction | undefined {
-    return actions.get(actionId);
+  /** Inject a repository directly (used for testing). */
+  _setRepo(repo: PendingActionRepository): void {
+    this.repo = repo;
   }
 
-  createAction(
+  async getPendingActions(userId: string): Promise<PendingAction[]> {
+    const repo = await this.getRepo();
+    const rows = await repo.findPendingByUserId(userId);
+    return rows.map(rowToAction);
+  }
+
+  async getAction(actionId: string): Promise<PendingAction | undefined> {
+    const repo = await this.getRepo();
+    const row = await repo.findById(actionId);
+    return row ? rowToAction(row) : undefined;
+  }
+
+  async createAction(
     userId: string,
     conversationId: string,
     actionType: ActionType,
     params: PendingAction['params'],
     description: string
-  ): PendingAction {
-    const action: PendingAction = {
-      id: randomUUID(),
-      userId,
-      conversationId,
-      actionType,
-      params,
+  ): Promise<PendingAction> {
+    const repo = await this.getRepo();
+    const row = await repo.create({
+      user_id: userId,
+      conversation_id: conversationId,
+      action_type: actionType,
+      action_payload: params,
       description,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-    actions.set(action.id, action);
-    return action;
+    });
+    return rowToAction(row);
   }
 
   async approveAction(actionId: string, auth: Auth.OAuth2Client, userId: string): Promise<PendingAction> {
-    const action = actions.get(actionId);
-    if (!action) {
+    const repo = await this.getRepo();
+    const row = await repo.findById(actionId);
+    if (!row) {
       throw new Error('Action not found');
     }
-    if (action.userId !== userId) {
+    if (row.user_id !== userId) {
       throw new Error('Unauthorized');
     }
-    if (action.status !== 'pending') {
-      throw new Error(`Action already ${action.status}`);
+    if (row.status !== 'pending') {
+      throw new Error(`Action already ${row.status}`);
     }
+
+    const action = rowToAction(row);
 
     try {
       switch (action.actionType) {
@@ -64,35 +94,37 @@ export class ActionService {
           break;
         }
       }
-      action.status = 'executed';
+      const updated = await repo.updateStatus(actionId, 'executed');
+      return updated ? rowToAction(updated) : { ...action, status: 'executed', resolvedAt: new Date().toISOString() };
     } catch (error) {
-      action.status = 'failed';
+      await repo.updateStatus(actionId, 'failed');
       throw error;
     }
-
-    action.resolvedAt = new Date().toISOString();
-    return action;
   }
 
-  rejectAction(actionId: string, userId: string): PendingAction {
-    const action = actions.get(actionId);
-    if (!action) {
+  async rejectAction(actionId: string, userId: string): Promise<PendingAction> {
+    const repo = await this.getRepo();
+    const row = await repo.findById(actionId);
+    if (!row) {
       throw new Error('Action not found');
     }
-    if (action.userId !== userId) {
+    if (row.user_id !== userId) {
       throw new Error('Unauthorized');
     }
-    if (action.status !== 'pending') {
-      throw new Error(`Action already ${action.status}`);
+    if (row.status !== 'pending') {
+      throw new Error(`Action already ${row.status}`);
     }
-    action.status = 'rejected';
-    action.resolvedAt = new Date().toISOString();
-    return action;
+
+    const updated = await repo.updateStatus(actionId, 'rejected');
+    return updated ? rowToAction(updated) : rowToAction({ ...row, status: 'rejected', resolved_at: new Date().toISOString() });
   }
 
-  /** For testing: clear all data */
-  _clear(): void {
-    actions.clear();
+  /** For testing: clear all pending actions from DB */
+  async _clear(): Promise<void> {
+    const repo = await this.getRepo();
+    // Access the collection directly via a known method — drop all docs
+    const db = (repo as any).db as Db;
+    await db.collection('pending_actions').deleteMany({});
   }
 }
 
