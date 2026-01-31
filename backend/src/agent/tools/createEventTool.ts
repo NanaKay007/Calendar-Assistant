@@ -1,13 +1,13 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
-export function createCreateEventTool() {
+export function createCreateEventTool(clientTimezone?: string) {
   return tool(
     async (input) => {
       return JSON.stringify({
         pendingAction: true,
         actionType: 'create_event',
-        payload: input,
+        payload: { ...input, timeZone: input.timeZone || clientTimezone },
       });
     },
     {
@@ -20,6 +20,7 @@ export function createCreateEventTool() {
         calendarId: z.string().describe('Calendar ID. Use "primary" for default calendar.'),
         description: z.string().optional().describe('Event description'),
         location: z.string().optional().describe('Event location'),
+        timeZone: z.string().optional().describe('IANA timezone for the event (e.g. "America/New_York"). Defaults to user\'s browser timezone.'),
       }),
     }
   );

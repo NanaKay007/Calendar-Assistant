@@ -81,12 +81,16 @@ export function setupWebSocket(server: HttpServer): WebSocketServer {
         return;
       }
 
+      // Client timezone (IANA, e.g. "America/New_York")
+      const timezone = typeof parsed.timezone === 'string' ? parsed.timezone : undefined;
+
       try {
         const result = await chatService.sendMessage(
           userId,
           conversationId,
           message,
           accessToken,
+          timezone,
         );
         const data: any = { ...result };
         if (result.pendingAction) {

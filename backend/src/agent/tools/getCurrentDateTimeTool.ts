@@ -2,10 +2,12 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { DateTime } from 'luxon';
 
-export function createGetCurrentDateTimeTool() {
+export function createGetCurrentDateTimeTool(clientTimezone?: string) {
   return tool(
     async () => {
-      const now = DateTime.now();
+      const now = clientTimezone
+        ? DateTime.now().setZone(clientTimezone)
+        : DateTime.now();
 
       return JSON.stringify({
         date: now.toFormat('yyyy-MM-dd'),

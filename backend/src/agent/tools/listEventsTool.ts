@@ -5,20 +5,20 @@ import { DateTime } from 'luxon';
 import { calendarService } from '../../services/calendar.service';
 import { CalendarEvent } from '../../types';
 
-function convertEventTimesToLocal(events: CalendarEvent[]): CalendarEvent[] {
-  const localZone = DateTime.now().zoneName;
+function convertEventTimesToLocal(events: CalendarEvent[], clientTimezone?: string): CalendarEvent[] {
+  const zone = clientTimezone || DateTime.now().zoneName;
   return events.map((event) => ({
     ...event,
     start: event.start?.dateTime
-      ? { ...event.start, dateTime: DateTime.fromISO(event.start.dateTime).setZone(localZone).toISO()! }
+      ? { ...event.start, dateTime: DateTime.fromISO(event.start.dateTime).setZone(zone).toISO()! }
       : event.start,
     end: event.end?.dateTime
-      ? { ...event.end, dateTime: DateTime.fromISO(event.end.dateTime).setZone(localZone).toISO()! }
+      ? { ...event.end, dateTime: DateTime.fromISO(event.end.dateTime).setZone(zone).toISO()! }
       : event.end,
   }));
 }
 
-export function createListEventsTool(accessToken: string) {
+export function createListEventsTool(accessToken: string, clientTimezone?: string) {
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({ access_token: accessToken });
 
@@ -28,7 +28,7 @@ export function createListEventsTool(accessToken: string) {
         timeMin: input.timeMin,
         timeMax: input.timeMax,
       });
-      return JSON.stringify(convertEventTimesToLocal(events));
+      return JSON.stringify(convertEventTimesToLocal(events, clientTimezone));
     },
     {
       name: 'list_events',

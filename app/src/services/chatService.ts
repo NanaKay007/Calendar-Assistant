@@ -227,7 +227,7 @@ class ChatService {
       }, 30000);
       this.pendingRequests.set(requestId, { resolve: resolve as any, reject, timer });
 
-      const payload: any = { type: 'send_message', message: content, requestId };
+      const payload: any = { type: 'send_message', message: content, requestId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
       if (conversationId) {
         // Defense-in-depth: validate conversationId format on the client side too
         if (!/^[a-zA-Z0-9_-]{1,64}$/.test(conversationId)) {
