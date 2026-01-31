@@ -77,7 +77,7 @@ export function CalendarList() {
         {calendars.map((calendar) => (
           <div
             key={calendar.id}
-            onClick={() => navigate(`/calendar/${calendar.id}`)}
+            onClick={() => navigate(`/calendar/${encodeURIComponent(calendar.id)}`)}
             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200 overflow-hidden"
           >
             <div
