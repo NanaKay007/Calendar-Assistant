@@ -214,6 +214,92 @@ export class CalendarService {
   }
 
   /**
+   * Search events by text query
+   */
+  async searchEvents(
+    auth: Auth.OAuth2Client,
+    calendarId: string,
+    query: string,
+    options?: {
+      timeMin?: string;
+      timeMax?: string;
+      maxResults?: number;
+    }
+  ): Promise<CalendarEvent[]> {
+    try {
+      const calendar = google.calendar({ version: 'v3', auth });
+
+      const response = await calendar.events.list({
+        calendarId,
+        q: query,
+        timeMin: options?.timeMin || new Date().toISOString(),
+        timeMax: options?.timeMax,
+        singleEvents: true,
+        orderBy: 'startTime',
+        maxResults: options?.maxResults || 50,
+      });
+
+      if (!response.data.items) {
+        return [];
+      }
+
+      return response.data.items.map((event) => ({
+        id: event.id || '',
+        summary: event.summary,
+        description: event.description,
+        start: event.start,
+        end: event.end,
+        attendees: event.attendees,
+        location: event.location,
+        status: event.status,
+        htmlLink: event.htmlLink,
+      }));
+    } catch (error) {
+      console.error('Error searching events:', error);
+      throw new Error('Failed to search events');
+    }
+  }
+
+  /**
+   * Query free/busy status for calendars
+   */
+  async getFreeBusy(
+    auth: Auth.OAuth2Client,
+    timeMin: string,
+    timeMax: string,
+    calendarIds: string[]
+  ): Promise<Record<string, { busy: Array<{ start: string; end: string }> }>> {
+    try {
+      const calendar = google.calendar({ version: 'v3', auth });
+
+      const response = await calendar.freebusy.query({
+        requestBody: {
+          timeMin,
+          timeMax,
+          items: calendarIds.map((id) => ({ id })),
+        },
+      });
+
+      const result: Record<string, { busy: Array<{ start: string; end: string }> }> = {};
+
+      const calendars = response.data.calendars || {};
+      for (const [calId, data] of Object.entries(calendars)) {
+        result[calId] = {
+          busy: (data.busy || []).map((period) => ({
+            start: period.start || '',
+            end: period.end || '',
+          })),
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error querying free/busy:', error);
+      throw new Error('Failed to query free/busy status');
+    }
+  }
+
+  /**
    * Delete an event
    */
   async deleteEvent(auth: Auth.OAuth2Client, calendarId: string, eventId: string): Promise<void> {

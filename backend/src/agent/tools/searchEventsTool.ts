@@ -1,6 +1,7 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { google } from 'googleapis';
+import { calendarService } from '../../services/calendar.service';
 
 export function createSearchEventsTool(accessToken: string) {
   const oauth2Client = new google.auth.OAuth2();
@@ -8,29 +9,15 @@ export function createSearchEventsTool(accessToken: string) {
 
   return tool(
     async (input) => {
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-      const response = await calendar.events.list({
-        calendarId: input.calendarId || 'primary',
-        q: input.query,
-        timeMin: input.timeMin || new Date().toISOString(),
-        timeMax: input.timeMax,
-        singleEvents: true,
-        orderBy: 'startTime',
-        maxResults: 50,
-      });
-
-      const events = (response.data.items || []).map((event) => ({
-        id: event.id,
-        summary: event.summary,
-        description: event.description,
-        start: event.start,
-        end: event.end,
-        location: event.location,
-        status: event.status,
-        htmlLink: event.htmlLink,
-      }));
-
+      const events = await calendarService.searchEvents(
+        oauth2Client,
+        input.calendarId || 'primary',
+        input.query,
+        {
+          timeMin: input.timeMin,
+          timeMax: input.timeMax,
+        }
+      );
       return JSON.stringify(events);
     },
     {

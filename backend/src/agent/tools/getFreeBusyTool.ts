@@ -1,6 +1,7 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { google } from 'googleapis';
+import { calendarService } from '../../services/calendar.service';
 
 export function createGetFreeBusyTool(accessToken: string) {
   const oauth2Client = new google.auth.OAuth2();
@@ -8,30 +9,13 @@ export function createGetFreeBusyTool(accessToken: string) {
 
   return tool(
     async (input) => {
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
       const calendarIds = input.calendarIds || ['primary'];
-
-      const response = await calendar.freebusy.query({
-        requestBody: {
-          timeMin: input.timeMin,
-          timeMax: input.timeMax,
-          items: calendarIds.map((id) => ({ id })),
-        },
-      });
-
-      const result: Record<string, { busy: Array<{ start: string; end: string }> }> = {};
-
-      const calendars = response.data.calendars || {};
-      for (const [calId, data] of Object.entries(calendars)) {
-        result[calId] = {
-          busy: (data.busy || []).map((period) => ({
-            start: period.start || '',
-            end: period.end || '',
-          })),
-        };
-      }
-
+      const result = await calendarService.getFreeBusy(
+        oauth2Client,
+        input.timeMin,
+        input.timeMax,
+        calendarIds
+      );
       return JSON.stringify(result);
     },
     {
