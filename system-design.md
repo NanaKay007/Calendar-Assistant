@@ -288,8 +288,52 @@ POST /api/chat
 
 | Component       | Host                                      |
 |-----------------|-------------------------------------------|
-| Frontend        | Vercel                                    |
-| Backend API     | Railway free tier                          |
-| Database        | MongoDB Atlas free tier                    |
+| Frontend + Backend | Railway (free tier, single service)    |
+| Database        | MongoDB Atlas (free M0 tier)              |
 | LLM             | Google Gemini free tier API (default) or Anthropic Claude |
 | OAuth           | Google Cloud (no cost for OAuth alone)     |
+
+### Production Architecture
+
+Single-service deployment on Railway — the Express backend serves the built React SPA as static files, eliminating cross-origin complexity.
+
+```
+┌─────────────────────────────────┐
+│      Railway (Single Service)   │
+│  ┌───────────────────────────┐  │
+│  │  Express Backend          │  │
+│  │  - API routes (/api/*)    │  │
+│  │  - WebSocket (/ws)        │  │
+│  │  - Static files (app/dist)│  │
+│  │  - SPA fallback           │  │
+│  └─────────────┬─────────────┘  │
+│                │                │
+└────────────────┼────────────────┘
+                 │
+                 ▼
+       ┌──────────────────────┐
+       │  MongoDB Atlas (M0)   │
+       │  Sessions, Users,     │
+       │  Conversations, etc.  │
+       └──────────────────────┘
+```
+
+### Production Configuration
+
+- **Same-origin:** Frontend and API share the same domain — no CORS or cross-origin cookie issues
+- **Cookies:** `secure: true`, `sameSite: 'lax'` in production
+- **Proxy:** `trust proxy` enabled on Express for Railway's reverse proxy
+- **Static serving:** Express serves `app/dist/` and falls back to `index.html` for SPA routing
+
+### Environment Variables (Railway)
+
+- `NODE_ENV=production`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+- `SESSION_SECRET`, `TOKEN_ENCRYPTION_KEY` (64-char hex)
+- `MONGODB_URI`, `MONGODB_DB_NAME`
+- `FRONTEND_URL` (Railway domain, e.g. `https://your-app.up.railway.app`)
+- `LLM_PROVIDER`, `GOOGLE_GEMINI_API_KEY`
+
+### Deployment Config
+
+- `railway.json` (repo root) — builds both `backend/` and `app/`, starts backend which serves everything

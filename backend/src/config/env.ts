@@ -1,9 +1,12 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.dev.local';
-
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+// In production (e.g. Railway), env vars are set via the platform dashboard.
+// Only load from .env files in non-production environments.
+if (process.env.NODE_ENV !== 'production') {
+  const envFile = '.env.dev.local';
+  dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+}
 
 interface EnvConfig {
   port: number;
@@ -47,7 +50,7 @@ export const config: EnvConfig = {
     clientId: getEnvVar('GOOGLE_CLIENT_ID'),
     clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
     redirectUri: getEnvVar('GOOGLE_REDIRECT_URI'),
-    geminiApiKey: getEnvVar('GOOGLE_GEMINI_API_KEY'),
+    geminiApiKey: process.env.GOOGLE_GEMINI_API_KEY || '',
   },
   session: {
     secret: getEnvVar('SESSION_SECRET'),

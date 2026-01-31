@@ -60,7 +60,11 @@
 - [ ] **Fix integration test timeouts** — WebSocket integration tests (`chat.integration.test.ts`) time out due to Gemini API throttling; revisit when rate limits are resolved
 
 ### Deployment
-- [ ] Deploy frontend to Vercel
-- [ ] Deploy backend to Railway free tier
-- [ ] Configure production environment variables (Google OAuth credentials, Gemini API key)
-- [ ] Set up SQLite persistence (or Turso free tier) for production
+- [x] Production deployment — single Railway service serving both backend API and frontend SPA
+- [x] Express serves built frontend (`app/dist/`) as static files with SPA fallback
+- [x] Production cookie config (`secure: true`, `trust proxy`)
+- [x] Railway build/deploy config (`railway.json` at repo root)
+- [x] Make `GOOGLE_GEMINI_API_KEY` optional when using Claude provider
+- [x] Skip `.env` file loading in production (Railway sets env vars via dashboard)
+- [ ] Configure production environment variables in Railway dashboard
+- [ ] Add production OAuth redirect URI in Google Cloud Console

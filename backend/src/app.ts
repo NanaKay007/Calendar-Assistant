@@ -3,12 +3,20 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import path from 'path';
 import { config } from './config/env';
 import authRoutes from './routes/auth.routes';
 import calendarRoutes from './routes/calendar.routes';
 import chatRoutes from './routes/chat.routes';
 
 const app = express();
+
+const isProduction = config.nodeEnv === 'production';
+
+// Trust proxy in production (Railway uses reverse proxy)
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
 
 // Middleware
 app.use(express.json());
@@ -37,7 +45,7 @@ export const sessionMiddleware = session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: isProduction,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: 'lax',
@@ -98,7 +106,18 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// 404 handler
+// In production, serve the frontend SPA from the built app directory
+if (isProduction) {
+  const frontendDir = path.resolve(__dirname, '../../app/dist');
+  app.use(express.static(frontendDir));
+
+  // SPA fallback: serve index.html for any non-API route
+  app.get('*', (req: Request, res: Response) => {
+    res.sendFile(path.join(frontendDir, 'index.html'));
+  });
+}
+
+// 404 handler (only reached for API routes in production, or all unmatched in dev)
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
