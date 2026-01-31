@@ -16,6 +16,7 @@ interface BackendChatResponse {
   reply: string;
   conversationId: string;
   pendingAction?: BackendPendingAction;
+  pendingActions?: BackendPendingAction[];
 }
 
 interface WsReplyMessage {
@@ -34,7 +35,7 @@ type WsIncoming = WsReplyMessage | WsErrorMessage;
 
 interface SendResult {
   message: ChatMessage;
-  pendingAction?: PendingAction;
+  pendingActions?: PendingAction[];
 }
 
 function mapPendingAction(backend: BackendPendingAction): PendingAction {
@@ -147,15 +148,19 @@ class ChatService {
         timestamp: new Date().toISOString(),
       };
 
-      let pendingAction: PendingAction | undefined;
-      if (response.pendingAction) {
-        pendingAction = mapPendingAction(response.pendingAction);
-        this.pendingActions.push(pendingAction);
+      // Collect all pending actions (chained mutations)
+      const mappedActions: PendingAction[] = [];
+
+      const backendActions = response.pendingActions ?? (response.pendingAction ? [response.pendingAction] : []);
+      for (const ba of backendActions) {
+        const mapped = mapPendingAction(ba);
+        mappedActions.push(mapped);
+        this.pendingActions.push(mapped);
       }
 
       pending.resolve({
         message: assistantMessage,
-        pendingAction,
+        pendingActions: mappedActions.length > 0 ? mappedActions : undefined,
         conversationId: response.conversationId,
       } as SendResult & { conversationId: string });
     };
