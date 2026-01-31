@@ -4,18 +4,18 @@ const API_BASE = '/api';
 
 export interface Conversation {
   id: string;
-  user_id: string;
+  userId: string;
   title: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ConversationMessage {
   id: string;
-  conversation_id: string;
+  conversationId: string;
   role: 'user' | 'assistant' | 'tool';
   content: string;
-  created_at: string;
+  createdAt: string;
 }
 
 class ApiError extends Error {
@@ -76,7 +76,7 @@ class ConversationService {
         id: m.id,
         role: m.role as 'user' | 'assistant',
         content: m.content,
-        timestamp: m.created_at,
+        timestamp: m.createdAt,
       }));
   }
 }

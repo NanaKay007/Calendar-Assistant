@@ -46,11 +46,16 @@
 - [x] Connect frontend auth to real backend OAuth flow (PR #15)
 - [x] Connect calendar views to real backend calendar endpoints (PR #15)
 - [x] Conversation history sidebar — fetch and display past conversations, load messages on click, new conversation button (PR #18)
+- [x] Persist pending actions across page refresh — frontend fetches outstanding pending actions on conversation load via `GET /api/actions/pending?conversationId=` (PR #20)
 
 ### Multi-Provider LLM Support
 - [x] Add Claude (Anthropic) as configurable LLM provider alongside Gemini via `LLM_PROVIDER` env variable
 - [x] LLM factory with provider selection (`backend/src/agent/llm.ts`)
 - [x] Integration tests for LLM factory
+
+### UX Improvements
+- [x] Approval modal shows human-readable event details instead of raw JSON and technical IDs
+- [x] Approve/reject decisions saved as conversation messages for chat history persistence
 
 ### Testing
 - [ ] Unit tests for LangChain agent and tools

@@ -110,27 +110,42 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
   const renderActionDetails = () => {
     const { type, details } = action;
 
+    if (!details || typeof details !== 'object') {
+      return (
+        <div className="bg-yellow-50 rounded-lg p-4 text-yellow-700 text-sm">
+          No action details available
+        </div>
+      );
+    }
+
     if (type === 'delete_event') {
-      const deleteDetails = details as DeleteEventDetails;
-      if (!deleteDetails.calendarId || !deleteDetails.eventId) {
-        return <div className="bg-red-50 rounded-lg p-4 text-red-700 text-sm">Invalid delete action data</div>;
-      }
+      const deleteDetails = details as DeleteEventDetails & { summary?: string };
       return (
         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-          <div>
-            <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{deleteDetails.calendarId}</p>
-          </div>
-          <div>
-            <span className="text-sm font-medium text-gray-700">Event ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{deleteDetails.eventId}</p>
-          </div>
+          {deleteDetails.summary ? (
+            <div>
+              <span className="text-sm font-medium text-gray-700">Event:</span>
+              <p className="text-sm text-gray-900 mt-1">{deleteDetails.summary}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">This action requires your approval.</p>
+          )}
         </div>
       );
     }
 
     // type is 'create_event' or 'update_event'
     const eventDetails = details as CreateEventDetails | UpdateEventDetails;
+
+    const hasReadableInfo = eventDetails.summary || eventDetails.startDateTime || eventDetails.endDateTime || eventDetails.location || eventDetails.description;
+
+    if (!hasReadableInfo) {
+      return (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm text-gray-600">This action requires your approval.</p>
+        </div>
+      );
+    }
 
     return (
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -162,18 +177,6 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
           <div>
             <span className="text-sm font-medium text-gray-700">Description:</span>
             <p className="text-sm text-gray-900 mt-1">{eventDetails.description}</p>
-          </div>
-        )}
-        {eventDetails.calendarId && (
-          <div>
-            <span className="text-sm font-medium text-gray-700">Calendar ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{eventDetails.calendarId}</p>
-          </div>
-        )}
-        {'eventId' in eventDetails && eventDetails.eventId && (
-          <div>
-            <span className="text-sm font-medium text-gray-700">Event ID:</span>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{eventDetails.eventId}</p>
           </div>
         )}
       </div>
@@ -215,29 +218,6 @@ export function ApprovalModal({ action, onApprove, onReject, onClose }: Approval
           </div>
 
           <div className="mb-6">
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="w-5 h-5 text-blue-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-blue-700">{action.description}</p>
-                </div>
-              </div>
-            </div>
-
             <h3 className="text-sm font-semibold text-gray-900 mb-3">Action Details</h3>
             {renderActionDetails()}
           </div>
