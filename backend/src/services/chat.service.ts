@@ -22,7 +22,7 @@ async function callAgent(
   accessToken: string
 ): Promise<{
   reply: string;
-  toolCall?: { name: string; params: Record<string, any>; description: string };
+  toolCalls: { name: string; params: Record<string, any>; description: string }[];
 }> {
   const agent = await createCalendarAgent(accessToken);
 
@@ -34,20 +34,19 @@ async function callAgent(
     ? lastMessage.content
     : JSON.stringify(lastMessage.content);
 
-  // Scan tool messages for pendingAction
-  let toolCall: { name: string; params: Record<string, any>; description: string } | undefined;
+  // Scan tool messages for all pendingActions (chained mutating calls)
+  const toolCalls: { name: string; params: Record<string, any>; description: string }[] = [];
 
   for (const msg of result.messages) {
     if (typeof (msg as any)._getType === 'function' && (msg as any)._getType() === 'tool') {
       try {
         const parsed = JSON.parse(typeof msg.content === 'string' ? msg.content : '');
         if (parsed.pendingAction === true) {
-          toolCall = {
+          toolCalls.push({
             name: parsed.actionType,
             params: parsed.payload,
             description: `${parsed.actionType}: ${JSON.stringify(parsed.payload)}`,
-          };
-          break;
+          });
         }
       } catch {
         // Not JSON or no pendingAction — skip
@@ -55,7 +54,7 @@ async function callAgent(
     }
   }
 
-  return { reply, toolCall };
+  return { reply, toolCalls };
 }
 
 export class ChatService {
@@ -103,24 +102,31 @@ export class ChatService {
       console.error('Failed to persist assistant reply:', err);
     }
 
-    // Check for mutating tool calls → create PendingAction if needed
+    // Check for mutating tool calls → create PendingActions for all chained mutations
     const response: ChatResponse = {
       reply: agentResult.reply,
       conversationId: convId,
     };
 
-    if (agentResult.toolCall) {
-      const actionType = MUTATING_ACTIONS[agentResult.toolCall.name];
+    const pendingActions: import('../types').PendingAction[] = [];
+    for (const tc of agentResult.toolCalls) {
+      const actionType = MUTATING_ACTIONS[tc.name];
       if (actionType) {
-        const pendingAction = actionService.createAction(
+        const action = actionService.createAction(
           userId,
           convId,
           actionType,
-          agentResult.toolCall.params as any,
-          agentResult.toolCall.description
+          tc.params as any,
+          tc.description
         );
-        response.pendingAction = pendingAction;
+        pendingActions.push(action);
       }
+    }
+
+    if (pendingActions.length > 0) {
+      // Backwards compat: keep singular field for single actions
+      response.pendingAction = pendingActions[0];
+      response.pendingActions = pendingActions;
     }
 
     return response;
